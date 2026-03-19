@@ -1,4 +1,5 @@
 """Stub — RetrievalEngine SCRIMP++ stocastico."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -16,8 +17,9 @@ class MPStochasticRetrievalEngine(RetrievalEngine):
         - stride custom: scorrere solo a multipli di embedding_dim
         - Confrontare latenza vs FAISS nel benchmark harness (RA-03)
     """
+
     def __init__(self, sample_fraction: float = 0.1) -> None:
-        self._frac    = sample_fraction
+        self._frac = sample_fraction
         self._series: np.ndarray | None = None
         self._centers: list[LatLon] = []
         self._dim: int = 0

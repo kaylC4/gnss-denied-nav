@@ -38,6 +38,7 @@ Uso
     # oppure accetta anche Q=2 (float):
     df = PosParser(quality_max=2).parse("flight_dataset5.pos")
 """
+
 from __future__ import annotations
 
 import calendar
@@ -93,8 +94,7 @@ class PosParser:
             import pandas as pd
         except ImportError as exc:
             raise RuntimeError(
-                "Il pacchetto 'pandas' non è installato.\n"
-                "Esegui: pip install pandas pyarrow"
+                "Il pacchetto 'pandas' non è installato.\nEsegui: pip install pandas pyarrow"
             ) from exc
 
         pos_path = Path(path)
@@ -105,12 +105,21 @@ class PosParser:
         # Ogni riga dati ha 15 colonne separate da spazi (2 per timestamp + 13).
         # Le righe con '%' sono commenti e vengono saltate.
         col_names = [
-            "date", "time",
-            "lat", "lon", "height",
-            "Q", "ns",
-            "sdn", "sde", "sdu",
-            "sdne", "sdeu", "sdun",
-            "age", "ratio",
+            "date",
+            "time",
+            "lat",
+            "lon",
+            "height",
+            "Q",
+            "ns",
+            "sdn",
+            "sde",
+            "sdu",
+            "sdne",
+            "sdeu",
+            "sdun",
+            "age",
+            "ratio",
         ]
         df_raw = pd.read_csv(
             pos_path,
@@ -130,21 +139,20 @@ class PosParser:
             )
 
         # ── Conversione timestamp GPST → Unix [ns] ────────────────────────────
-        ts_ns = [
-            self._gpst_to_unix_ns(d, t)
-            for d, t in zip(df_raw["date"], df_raw["time"])
-        ]
+        ts_ns = [self._gpst_to_unix_ns(d, t) for d, t in zip(df_raw["date"], df_raw["time"])]
 
         # ── Costruzione output DataFrame ──────────────────────────────────────
-        out = pd.DataFrame({
-            "timestamp_ns": ts_ns,
-            "lat":          df_raw["lat"].values,
-            "lon":          df_raw["lon"].values,
-            "alt_wgs84_m":  df_raw["height"].values,
-            "alt_agl_m":    0.0,          # sovrascritta più avanti dalla pipeline
-            "is_gt":        True,
-            "q_flag":       df_raw["Q"].values,
-        })
+        out = pd.DataFrame(
+            {
+                "timestamp_ns": ts_ns,
+                "lat": df_raw["lat"].values,
+                "lon": df_raw["lon"].values,
+                "alt_wgs84_m": df_raw["height"].values,
+                "alt_agl_m": 0.0,  # sovrascritta più avanti dalla pipeline
+                "is_gt": True,
+                "q_flag": df_raw["Q"].values,
+            }
+        )
 
         return out.sort_values("timestamp_ns").reset_index(drop=True)
 
@@ -158,10 +166,10 @@ class PosParser:
         """
         # "2022/02/28" + "20:19:14.600"
         dt_gpst = datetime.strptime(f"{date_str} {time_str}", "%Y/%m/%d %H:%M:%S.%f")
-        dt_utc  = dt_gpst - timedelta(seconds=self._gps_leapseconds)
+        dt_utc = dt_gpst - timedelta(seconds=self._gps_leapseconds)
 
         # calendar.timegm interpreta la struttura come UTC (nessuna dipendenza
         # dal timezone locale della macchina, a differenza di mktime)
-        unix_s  = calendar.timegm(dt_utc.timetuple())
+        unix_s = calendar.timegm(dt_utc.timetuple())
         unix_ns = unix_s * 1_000_000_000 + dt_utc.microsecond * 1_000
         return int(unix_ns)

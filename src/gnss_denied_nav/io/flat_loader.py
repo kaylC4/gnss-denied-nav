@@ -14,6 +14,7 @@ Struttura attesa su disco
 Questa classe non sa nulla di ROS, bag file o altri formati sorgente.
 Riceve dati già convertiti e produce SensorFrame pronti per la pipeline.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -48,20 +49,20 @@ class FlatDataLoader(DataLoader):
         self._deny_after_ns = deny_after_ns
 
         self._frames = pd.read_parquet(self._root / "frames.parquet")
-        self._imu    = pd.read_parquet(self._root / "imu.parquet")
-        self._gnss   = pd.read_parquet(self._root / "gnss.parquet")
+        self._imu = pd.read_parquet(self._root / "imu.parquet")
+        self._gnss = pd.read_parquet(self._root / "gnss.parquet")
 
         # Ordina per timestamp — necessario per le ricerche binarie
         self._frames = self._frames.sort_values("timestamp_ns").reset_index(drop=True)
-        self._imu    = self._imu.sort_values("timestamp_ns").reset_index(drop=True)
-        self._gnss   = self._gnss.sort_values("timestamp_ns").reset_index(drop=True)
+        self._imu = self._imu.sort_values("timestamp_ns").reset_index(drop=True)
+        self._gnss = self._gnss.sort_values("timestamp_ns").reset_index(drop=True)
 
         # Array NumPy pre-estratti per lookups veloci senza overhead pandas
-        self._imu_ts   = self._imu["timestamp_ns"].to_numpy(dtype=np.int64)
-        self._gnss_ts  = self._gnss["timestamp_ns"].to_numpy(dtype=np.int64)
-        self._imu_data = self._imu[
-            ["timestamp_ns", "ax", "ay", "az", "gx", "gy", "gz"]
-        ].to_numpy(dtype=np.float64)
+        self._imu_ts = self._imu["timestamp_ns"].to_numpy(dtype=np.int64)
+        self._gnss_ts = self._gnss["timestamp_ns"].to_numpy(dtype=np.int64)
+        self._imu_data = self._imu[["timestamp_ns", "ax", "ay", "az", "gx", "gy", "gz"]].to_numpy(
+            dtype=np.float64
+        )
 
     # ── interfaccia pubblica ──────────────────────────────────────────────────
 
@@ -79,12 +80,10 @@ class FlatDataLoader(DataLoader):
     def _build_frame(self, row: object, prev_ts: int) -> SensorFrame:
         ts = int(row.timestamp_ns)  # type: ignore[attr-defined]
 
-        image      = self._load_image(row.filename)           # type: ignore[attr-defined]
+        image = self._load_image(row.filename)  # type: ignore[attr-defined]
         imu_window = self._slice_imu(prev_ts, ts)
         gnss_fix, alt_agl_m = self._last_gnss_fix(ts)
-        gnss_denied = (
-            self._deny_after_ns is not None and ts >= self._deny_after_ns
-        )
+        gnss_denied = self._deny_after_ns is not None and ts >= self._deny_after_ns
 
         return SensorFrame(
             timestamp_ns=ts,
@@ -109,7 +108,7 @@ class FlatDataLoader(DataLoader):
         e *entro* il frame corrente.
         """
         lo = int(np.searchsorted(self._imu_ts, prev_ts, side="right"))
-        hi = int(np.searchsorted(self._imu_ts, ts,      side="right"))
+        hi = int(np.searchsorted(self._imu_ts, ts, side="right"))
         return self._imu_data[lo:hi]  # shape (N, 7) — può essere (0, 7) se N=0
 
     def _last_gnss_fix(self, ts: int) -> tuple[LatLon | None, float]:

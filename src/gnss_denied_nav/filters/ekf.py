@@ -1,4 +1,5 @@
 """Stub — NavigationFilter EKF loosely-coupled INS + vision (RF-10/11/12)."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -17,6 +18,7 @@ class EKFNavigationFilter(NavigationFilter):
         - R adattiva da match_score e patch_size_m (RF-12)
         - Delayed measurement: compensazione latenza visione con velocità INS
     """
+
     def __init__(
         self,
         chi2_gate: float = 5.99,
@@ -25,11 +27,11 @@ class EKFNavigationFilter(NavigationFilter):
         Q_gyro: float = 0.001,
     ) -> None:
         self._chi2_gate = chi2_gate
-        self._R_min     = R_min_m2
-        self._x  = np.zeros(15)
-        self._P  = np.eye(15) * 1e4
+        self._R_min = R_min_m2
+        self._x = np.zeros(15)
+        self._P = np.eye(15) * 1e4
         self._Q_accel = Q_accel
-        self._Q_gyro  = Q_gyro
+        self._Q_gyro = Q_gyro
 
     def predict(self, imu_measurement: np.ndarray) -> NavState:
         raise NotImplementedError("EKFNavigationFilter.predict() — da implementare")

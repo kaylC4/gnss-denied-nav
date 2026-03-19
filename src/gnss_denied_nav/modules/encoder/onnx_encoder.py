@@ -1,4 +1,5 @@
 """Stub — FeatureEncoder via ONNX Runtime (CPU embedded)."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -15,11 +16,12 @@ class OnnxFeatureEncoder(FeatureEncoder):
         - Batch inference, fallback su singola immagine se OOM
         - L2-normalizzazione degli output (norma unitaria per cosine similarity)
     """
+
     def __init__(self, checkpoint: str = "", input_size: int = 224) -> None:
         self._checkpoint = checkpoint
         self._input_size = input_size
-        self._session    = None
-        self._dim: int   = 0
+        self._session = None
+        self._dim: int = 0
 
     def encode(self, images: np.ndarray, timestamp_ns: int = 0) -> EmbeddingBatch:
         raise NotImplementedError("OnnxFeatureEncoder.encode() — da implementare")

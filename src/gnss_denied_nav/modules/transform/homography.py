@@ -1,4 +1,5 @@
 """Stub — ViewTransformer via omografia inversa (drone → ortometrico)."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -16,6 +17,7 @@ class HomographyViewTransformer(ViewTransformer):
         - cv2.warpPerspective con INTER_LINEAR + BORDER_CONSTANT
         - valid_mask: True dove il frustum copre il piano del suolo
     """
+
     def transform(
         self,
         drone_frame: np.ndarray,

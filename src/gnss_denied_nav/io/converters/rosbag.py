@@ -72,6 +72,7 @@ Uso — caso 3 (nessun PPK)
     )
     conv.convert("data/lighthouse_benchmarking.bag", "data/lighthouse_flat/")
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -113,10 +114,10 @@ class RosbagConverter(Converter):
         ppk_quality_max: int = 1,
         ppk_gps_leapseconds: int = 18,
     ) -> None:
-        self._topics              = topics
-        self._force               = force
-        self._ppk_pos_path        = ppk_pos_path
-        self._ppk_quality_max     = ppk_quality_max
+        self._topics = topics
+        self._force = force
+        self._ppk_pos_path = ppk_pos_path
+        self._ppk_quality_max = ppk_quality_max
         self._ppk_gps_leapseconds = ppk_gps_leapseconds
 
     def convert(self, source_path: str, output_dir: str) -> None:
@@ -129,7 +130,7 @@ class RosbagConverter(Converter):
         RuntimeError      : se rosbags/dipendenze non sono installate
         """
         source = Path(source_path)
-        out    = Path(output_dir)
+        out = Path(output_dir)
 
         if not source.exists():
             raise FileNotFoundError(f"Bag non trovato: {source}")
@@ -143,8 +144,7 @@ class RosbagConverter(Converter):
             from rosbags.rosbag1 import Reader  # type: ignore[import]
         except ImportError as exc:
             raise RuntimeError(
-                "Il pacchetto 'rosbags' non è installato.\n"
-                "Esegui: pip install rosbags"
+                "Il pacchetto 'rosbags' non è installato.\nEsegui: pip install rosbags"
             ) from exc
 
         try:
@@ -153,54 +153,59 @@ class RosbagConverter(Converter):
             import pandas as pd
         except ImportError as exc:
             raise RuntimeError(
-                "Dipendenze mancanti. Esegui:\n"
-                "  pip install opencv-python pandas pyarrow"
+                "Dipendenze mancanti. Esegui:\n  pip install opencv-python pandas pyarrow"
             ) from exc
 
         out.mkdir(parents=True, exist_ok=True)
         (out / "images").mkdir(exist_ok=True)
 
-        imu_rows    : list[dict] = []
-        gnss_rows   : list[dict] = []
-        frame_rows  : list[dict] = []
+        imu_rows: list[dict] = []
+        gnss_rows: list[dict] = []
+        frame_rows: list[dict] = []
 
         with Reader(source) as bag:
             for connection, timestamp_ns, rawdata in bag.messages():
-                topic   = connection.topic
+                topic = connection.topic
                 msgtype = connection.msgtype
 
                 # ── IMU ───────────────────────────────────────────────────────
                 if topic == self._topics.get("imu"):
                     msg = bag.deserialize(rawdata, msgtype)
-                    imu_rows.append({
-                        "timestamp_ns": timestamp_ns,
-                        "ax": msg.linear_acceleration.x,
-                        "ay": msg.linear_acceleration.y,
-                        "az": msg.linear_acceleration.z,
-                        "gx": msg.angular_velocity.x,
-                        "gy": msg.angular_velocity.y,
-                        "gz": msg.angular_velocity.z,
-                    })
+                    imu_rows.append(
+                        {
+                            "timestamp_ns": timestamp_ns,
+                            "ax": msg.linear_acceleration.x,
+                            "ay": msg.linear_acceleration.y,
+                            "az": msg.linear_acceleration.z,
+                            "gx": msg.angular_velocity.x,
+                            "gy": msg.angular_velocity.y,
+                            "gz": msg.angular_velocity.z,
+                        }
+                    )
 
                 # ── GNSS (ground truth nel bag e/o input) ─────────────────────
                 elif topic in (
-                    t for t in (
+                    t
+                    for t in (
                         self._topics.get("gnss_gt"),
                         self._topics.get("gnss_in"),
-                    ) if t is not None
+                    )
+                    if t is not None
                 ):
-                    msg   = bag.deserialize(rawdata, msgtype)
-                    is_gt = (topic == self._topics.get("gnss_gt"))
-                    gnss_rows.append({
-                        "timestamp_ns": timestamp_ns,
-                        "lat":          msg.latitude,
-                        "lon":          msg.longitude,
-                        "alt_wgs84_m":  msg.altitude,
-                        # alt_agl_m viene calcolato separatamente (GNSS - DEM);
-                        # inizializzato a 0.0, il pipeline lo sovrascrive
-                        "alt_agl_m":    0.0,
-                        "is_gt":        is_gt,
-                    })
+                    msg = bag.deserialize(rawdata, msgtype)
+                    is_gt = topic == self._topics.get("gnss_gt")
+                    gnss_rows.append(
+                        {
+                            "timestamp_ns": timestamp_ns,
+                            "lat": msg.latitude,
+                            "lon": msg.longitude,
+                            "alt_wgs84_m": msg.altitude,
+                            # alt_agl_m viene calcolato separatamente (GNSS - DEM);
+                            # inizializzato a 0.0, il pipeline lo sovrascrive
+                            "alt_agl_m": 0.0,
+                            "is_gt": is_gt,
+                        }
+                    )
 
                 # ── Camera ────────────────────────────────────────────────────
                 elif topic == self._topics.get("camera"):
@@ -208,7 +213,7 @@ class RosbagConverter(Converter):
 
                     if "CompressedImage" in msgtype:
                         # sensor_msgs/CompressedImage → numpy via JPEG/PNG decode
-                        buf    = np.frombuffer(msg.data, dtype=np.uint8)
+                        buf = np.frombuffer(msg.data, dtype=np.uint8)
                         img_np = cv2.imdecode(buf, cv2.IMREAD_COLOR)
                     else:
                         # sensor_msgs/Image → numpy (raw)
@@ -219,10 +224,12 @@ class RosbagConverter(Converter):
                     filename = f"{timestamp_ns}.png"
                     cv2.imwrite(str(out / "images" / filename), img_np)
 
-                    frame_rows.append({
-                        "timestamp_ns": timestamp_ns,
-                        "filename":     filename,
-                    })
+                    frame_rows.append(
+                        {
+                            "timestamp_ns": timestamp_ns,
+                            "filename": filename,
+                        }
+                    )
 
         # ── PPK da file .pos esterno (caso 2) ─────────────────────────────────
         # Si usa solo se gnss_gt non era un topic nel bag.
@@ -242,6 +249,6 @@ class RosbagConverter(Converter):
             gnss_rows.extend(ppk_rows)
 
         # ── Scrivi Parquet ────────────────────────────────────────────────────
-        pd.DataFrame(imu_rows).to_parquet(out / "imu.parquet",    index=False)
-        pd.DataFrame(gnss_rows).to_parquet(out / "gnss.parquet",  index=False)
+        pd.DataFrame(imu_rows).to_parquet(out / "imu.parquet", index=False)
+        pd.DataFrame(gnss_rows).to_parquet(out / "gnss.parquet", index=False)
         pd.DataFrame(frame_rows).to_parquet(out / "frames.parquet", index=False)

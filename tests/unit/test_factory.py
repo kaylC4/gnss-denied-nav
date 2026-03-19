@@ -1,4 +1,5 @@
 """Test che la factory carichi correttamente i moduli e validi le interfacce."""
+
 import pytest
 
 from gnss_denied_nav.interfaces.base import RetrievalEngine

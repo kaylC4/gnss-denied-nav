@@ -3,6 +3,7 @@ Interfacce astratte — ogni modulo concreto implementa una di queste classi.
 Nessun modulo importa direttamente un altro modulo concreto.
 L'istanziazione avviene esclusivamente tramite ModuleFactory.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -23,6 +24,7 @@ from gnss_denied_nav.interfaces.contracts import (
 )
 
 # ── I/O — livello indipendente dal formato sorgente ──────────────────────────
+
 
 class DataLoader(ABC):
     """
@@ -86,6 +88,7 @@ class Converter(ABC):
 
 # ── RF-02 ────────────────────────────────────────────────────────────────────
 
+
 class PoseEstimator(ABC):
     """
     Stima la posa della camera rispetto al terreno a partire da INS e RadAlt.
@@ -96,7 +99,7 @@ class PoseEstimator(ABC):
     @abstractmethod
     def estimate(
         self,
-        imu_window: np.ndarray,   # (N, 7) [ts_ns, ax, ay, az, gx, gy, gz]
+        imu_window: np.ndarray,  # (N, 7) [ts_ns, ax, ay, az, gx, gy, gz]
         alt_agl_m: float,
     ) -> CameraPose: ...
 
@@ -106,6 +109,7 @@ class PoseEstimator(ABC):
 
 
 # ── RF-03 ────────────────────────────────────────────────────────────────────
+
 
 class TileProvider(ABC):
     """
@@ -129,6 +133,7 @@ class TileProvider(ABC):
 
 # ── RF-04 ────────────────────────────────────────────────────────────────────
 
+
 class PatchSampler(ABC):
     """
     Sliding window sul mosaico con allineamento GSD.
@@ -151,6 +156,7 @@ class PatchSampler(ABC):
 
 # ── RF-05 ────────────────────────────────────────────────────────────────────
 
+
 class ViewTransformer(ABC):
     """
     Riproietta l'immagine drone nel reference frame ortometrico satellite.
@@ -161,7 +167,7 @@ class ViewTransformer(ABC):
     @abstractmethod
     def transform(
         self,
-        drone_frame: np.ndarray,    # (H, W, C) uint8
+        drone_frame: np.ndarray,  # (H, W, C) uint8
         pose: CameraPose,
         camera_matrix: np.ndarray,  # (3, 3) float64
         target_gsd_m: float,
@@ -175,6 +181,7 @@ class ViewTransformer(ABC):
 
 # ── RF-06 ────────────────────────────────────────────────────────────────────
 
+
 class FeatureEncoder(ABC):
     """
     Estrae embedding L2-normalizzati da immagini (batch o singola).
@@ -185,7 +192,7 @@ class FeatureEncoder(ABC):
     @abstractmethod
     def encode(
         self,
-        images: np.ndarray,         # (N, H, W, C) uint8
+        images: np.ndarray,  # (N, H, W, C) uint8
         timestamp_ns: int = 0,
     ) -> EmbeddingBatch: ...
 
@@ -199,6 +206,7 @@ class FeatureEncoder(ABC):
 
 
 # ── RF-07 ────────────────────────────────────────────────────────────────────
+
 
 class RetrievalEngine(ABC):
     """
@@ -216,7 +224,7 @@ class RetrievalEngine(ABC):
     @abstractmethod
     def query(
         self,
-        embedding: np.ndarray,      # (x,) float32
+        embedding: np.ndarray,  # (x,) float32
         timestamp_ns: int = 0,
     ) -> MatchResult: ...
 
@@ -232,6 +240,7 @@ class RetrievalEngine(ABC):
 
 
 # ── RF-10 ────────────────────────────────────────────────────────────────────
+
 
 class NavigationFilter(ABC):
     """
@@ -250,7 +259,7 @@ class NavigationFilter(ABC):
     def update(
         self,
         match: MatchResult,
-        R_measurement: np.ndarray,    # (2, 2) covarianza rumore misura [m²]
+        R_measurement: np.ndarray,  # (2, 2) covarianza rumore misura [m²]
     ) -> NavState: ...
 
     @abstractmethod
