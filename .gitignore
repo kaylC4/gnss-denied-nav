@@ -55,6 +55,7 @@ checkpoints/
 
 # ── Tile e cache satellite ────────────────────────────────────────────────────
 tiles/
+!src/**/tiles/
 *.mbtiles
 tile_cache/
 
