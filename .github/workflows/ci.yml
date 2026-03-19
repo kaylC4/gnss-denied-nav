@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Lint & type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Ruff lint
+        run: ruff check src/ tests/
+
+      - name: Ruff format check
+        run: ruff format --check src/ tests/
+
+      - name: Mypy type check
+        run: mypy src/
+
+  test:
+    name: Unit tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run tests
+        run: pytest tests/unit/ -v --cov=gnss_denied_nav --cov-report=xml
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+  interface-contracts:
+    name: Verify interface contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Check all stubs implement correct interface
+        run: |
+          python - << 'EOF'
+          import inspect
+          from gnss_denied_nav.interfaces.base import (
+              PoseEstimator, TileProvider, PatchSampler,
+              ViewTransformer, FeatureEncoder, RetrievalEngine, NavigationFilter,
+          )
+          from gnss_denied_nav.modules.pose.ins_radalt import InsRadAltPoseEstimator
+          from gnss_denied_nav.modules.tiles.mbtiles import MBTilesTileProvider
+          from gnss_denied_nav.modules.tiles.google_maps import GoogleMapsTileProvider
+          from gnss_denied_nav.modules.sampling.uniform import UniformPatchSampler
+          from gnss_denied_nav.modules.transform.homography import HomographyViewTransformer
+          from gnss_denied_nav.modules.encoder.onnx_encoder import OnnxFeatureEncoder
+          from gnss_denied_nav.modules.encoder.dinov2 import DINOv2FeatureEncoder
+          from gnss_denied_nav.modules.retrieval.faiss_flat import FAISSFlatRetrievalEngine
+          from gnss_denied_nav.modules.retrieval.faiss_hnsw import FAISSHNSWRetrievalEngine
+          from gnss_denied_nav.modules.retrieval.matrix_profile import MPStochasticRetrievalEngine
+          from gnss_denied_nav.filters.ekf import EKFNavigationFilter
+          from gnss_denied_nav.filters.particle import ParticleNavigationFilter
+
+          checks = [
+              (InsRadAltPoseEstimator,        PoseEstimator),
+              (MBTilesTileProvider,           TileProvider),
+              (GoogleMapsTileProvider,        TileProvider),
+              (UniformPatchSampler,           PatchSampler),
+              (HomographyViewTransformer,     ViewTransformer),
+              (OnnxFeatureEncoder,            FeatureEncoder),
+              (DINOv2FeatureEncoder,          FeatureEncoder),
+              (FAISSFlatRetrievalEngine,      RetrievalEngine),
+              (FAISSHNSWRetrievalEngine,      RetrievalEngine),
+              (MPStochasticRetrievalEngine,   RetrievalEngine),
+              (EKFNavigationFilter,           NavigationFilter),
+              (ParticleNavigationFilter,      NavigationFilter),
+          ]
+          for cls, iface in checks:
+              assert issubclass(cls, iface), f"{cls.__name__} must extend {iface.__name__}"
+              print(f"  OK  {cls.__name__} → {iface.__name__}")
+          print("All interface contracts verified.")
+          EOF

@@ -1,0 +1,81 @@
+# config/mun_frl_m600.yaml
+# Configurazione per sequenze DJI-M600 del dataset MUN-FRL
+# Compila i valori effettivi leggendo calibration.yaml dalla sequenza scaricata
+
+sensors:
+  camera:
+    hz: 10
+    width: 1280
+    height: 720
+    # Intrinseci — compilare con valori da calibration.yaml MUN-FRL
+    fx: 689.14
+    fy: 689.14
+    cx: 640.0
+    cy: 360.0
+    distortion: [0.0, 0.0, 0.0, 0.0]   # k1, k2, p1, p2
+    model: pinhole_radtan
+
+  imu:
+    hz: 400
+    # Xsens MTi-30 — valori tipici, verificare con Allan Variance sul dataset
+    accel_noise_density: 0.005     # m/s^2/sqrt(Hz)
+    gyro_noise_density: 0.001      # rad/s/sqrt(Hz)
+    accel_random_walk: 0.0002      # m/s^3/sqrt(Hz)
+    gyro_random_walk: 0.00003      # rad/s^2/sqrt(Hz)
+
+  gnss:
+    hz: 5
+    topic_gt: /fix_ppk             # ground truth post-processato
+    topic_input: /fix              # ultimo fix valido per search area
+    deny_after_s: null             # null = usa GPS reale, float = simula deny dopo N sec
+
+  altitude_agl:
+    source: gnss_minus_dem         # quota ellissoidica WGS84 - DEM locale
+    dem_path: ${SRTM_DATA_DIR}/quarry_area.tif  # espanso da .env
+
+# Trasformazioni estrinseci (da calibration.yaml MUN-FRL, convezione OpenCV 4x4)
+extrinsics:
+  T_cam_imu:
+    - [1.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0]
+    - [0.0, 0.0, 1.0, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]        # PLACEHOLDER — sostituire con valori reali
+
+pipeline:
+  pose_estimator: ins_radalt
+
+  tile_provider:
+    backend: offline_mbtiles
+    params:
+      mbtiles_path: ${MUN_FRL_DATA_DIR}/tiles/quarry_area.mbtiles
+
+  patch_sampler:
+    backend: uniform_stride
+    params:
+      stride_px: 64
+
+  patch_size_px: 256               # dimensione patch [pixel] — uguale al frame drone riproiettato
+
+  view_transformer: homography_inverse
+
+  feature_encoder:
+    backend: onnx
+    params:
+      checkpoint: ${ENCODER_WEIGHTS_DIR}/dinov2_vits14.onnx
+      input_size: 224
+
+  retrieval_engine:
+    backend: faiss_flat            # baseline — cambia in faiss_hnsw per produzione
+
+  navigation_filter:
+    backend: ekf_loosely_coupled
+    params:
+      chi2_gate: 5.99              # soglia Mahalanobis (α=0.95, dof=2)
+      R_min_m2: 25.0               # covarianza minima misura [m²]
+      Q_accel: 0.005
+      Q_gyro: 0.001
+
+evaluation:
+  min_match_score: 0.65            # soglia sotto cui il match non aggiorna il GPS (RF-09)
+  log_outliers: true
+  output_dir: outputs/quarry1/
