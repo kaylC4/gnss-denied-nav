@@ -47,6 +47,24 @@ dataset:
       gnss_gt:  /fix_ppk             # ground truth GPS post-processato (sensor_msgs/NavSatFix)
       gnss_in:  /fix                 # ultimo fix GPS in ingresso (sensor_msgs/NavSatFix)
 
+  # ── Ground truth PPK ────────────────────────────────────────────────────────
+  # Tre casi possibili:
+  #
+  #   source: rosbag     → il PPK è già un topic nel bag (gnss_gt sopra).
+  #                         pos_file viene ignorato.
+  #
+  #   source: pos_file   → il PPK NON è nel bag; si carica da un file RTKLIB .pos.
+  #                         Impostare gnss_gt: null nei topics e compilare pos_file.
+  #
+  #   source: null       → nessun PPK disponibile.
+  #                         gnss.parquet non avrà righe is_gt=True.
+  #
+  ppk:
+    source: rosbag         # "rosbag" | "pos_file" | null
+    pos_file: null         # path al .pos (usato solo se source: pos_file)
+    quality_max: 1         # Q <= quality_max: 1=fix, 2=fix+float
+    gps_leapseconds: 18    # offset GPS Time − UTC [s] (18 s dopo 2017-01-01)
+
 # ── Sensori — parametri fisici e calibrazione ────────────────────────────────
 sensors:
   camera:

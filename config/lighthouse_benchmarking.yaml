@@ -31,6 +31,19 @@ dataset:
       gnss_gt:  null                             # nessun NavSatFix PPK nel bag
       gnss_in:  /fix                             # sensor_msgs/NavSatFix
 
+  # ── Ground truth PPK ────────────────────────────────────────────────────────
+  # Questo bag NON contiene un topic NavSatFix PPK.
+  # Il file .pos RTKLIB è disponibile esternamente (output di RTKPOST).
+  #
+  # Cambia source: null se non hai ancora il file .pos.
+  # Cambia source: pos_file e compila pos_file quando ce l'hai.
+  #
+  ppk:
+    source: pos_file       # "rosbag" | "pos_file" | null
+    pos_file: ${LIGHTHOUSE_DATA_DIR}/flight_dataset5.pos
+    quality_max: 1         # Q=1 (fix) — soluzioni float escluse
+    gps_leapseconds: 18    # GPST − UTC = 18 s (valido per date >= 2017-01-01)
+
 # ── Sensori — parametri fisici e calibrazione ────────────────────────────────
 sensors:
   camera:
