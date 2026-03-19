@@ -164,7 +164,8 @@ class RosbagConverter(Converter):
         gnss_rows: list[dict[str, Any]] = []
         frame_rows: list[dict[str, Any]] = []
 
-        with Reader(source) as bag:
+        with Reader(source) as _bag:
+            bag: Any = _bag  # rosbags stubs variano tra versioni
             for connection, timestamp_ns, rawdata in bag.messages():
                 topic = connection.topic
                 msgtype = connection.msgtype
