@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import numpy as np
-from scipy.spatial.transform import Rotation
 
 from gnss_denied_nav.interfaces.base import PoseEstimator
 from gnss_denied_nav.interfaces.contracts import CameraPose

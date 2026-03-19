@@ -1,8 +1,11 @@
 """Stub — RetrievalEngine SCRIMP++ stocastico."""
 from __future__ import annotations
+
 import numpy as np
+
 from gnss_denied_nav.interfaces.base import RetrievalEngine
 from gnss_denied_nav.interfaces.contracts import EmbeddingBatch, LatLon, MatchResult
+
 
 class MPStochasticRetrievalEngine(RetrievalEngine):
     """

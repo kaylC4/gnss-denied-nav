@@ -1,8 +1,11 @@
 """Stub — NavigationFilter Particle Filter (alternativa non-lineare)."""
 from __future__ import annotations
+
 import numpy as np
+
 from gnss_denied_nav.interfaces.base import NavigationFilter
 from gnss_denied_nav.interfaces.contracts import MatchResult, NavState
+
 
 class ParticleNavigationFilter(NavigationFilter):
     """

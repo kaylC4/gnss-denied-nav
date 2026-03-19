@@ -81,11 +81,11 @@ class ModuleFactory:
         self._config = config
 
     @classmethod
-    def from_config(cls, path: str) -> "ModuleFactory":
+    def from_config(cls, path: str) -> ModuleFactory:
         with open(path) as f:
             return cls(yaml.safe_load(f))
 
-    def build(self, module_key: str) -> Any:
+    def build(self, module_key: str) -> object:
         """
         Istanzia il modulo richiesto leggendo backend e params dalla config.
         Lancia ValueError se il backend non è registrato.

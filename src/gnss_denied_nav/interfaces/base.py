@@ -6,10 +6,9 @@ L'istanziazione avviene esclusivamente tramite ModuleFactory.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 
 import numpy as np
-
-from collections.abc import Iterator
 
 from gnss_denied_nav.interfaces.contracts import (
     CameraPose,
@@ -22,7 +21,6 @@ from gnss_denied_nav.interfaces.contracts import (
     TileMosaic,
     TransformedQuery,
 )
-
 
 # ── I/O — livello indipendente dal formato sorgente ──────────────────────────
 

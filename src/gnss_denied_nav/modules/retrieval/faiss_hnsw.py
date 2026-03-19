@@ -1,8 +1,11 @@
 """Stub — RetrievalEngine HNSW (ANN per produzione)."""
 from __future__ import annotations
+
 import numpy as np
+
 from gnss_denied_nav.interfaces.base import RetrievalEngine
 from gnss_denied_nav.interfaces.contracts import EmbeddingBatch, LatLon, MatchResult
+
 
 class FAISSHNSWRetrievalEngine(RetrievalEngine):
     """

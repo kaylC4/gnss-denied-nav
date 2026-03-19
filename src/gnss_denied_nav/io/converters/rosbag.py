@@ -140,7 +140,7 @@ class RosbagConverter(Converter):
 
         # ── import lazy: rosbags è opzionale ─────────────────────────────────
         try:
-            from rosbags.rosbag1 import Reader                    # type: ignore[import]
+            from rosbags.rosbag1 import Reader  # type: ignore[import]
         except ImportError as exc:
             raise RuntimeError(
                 "Il pacchetto 'rosbags' non è installato.\n"
@@ -148,7 +148,7 @@ class RosbagConverter(Converter):
             ) from exc
 
         try:
-            import cv2                                             # type: ignore[import]
+            import cv2  # type: ignore[import]
             import numpy as np
             import pandas as pd
         except ImportError as exc:

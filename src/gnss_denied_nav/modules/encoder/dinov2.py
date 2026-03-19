@@ -1,8 +1,11 @@
 """Stub — FeatureEncoder DINOv2 via PyTorch Hub."""
 from __future__ import annotations
+
 import numpy as np
+
 from gnss_denied_nav.interfaces.base import FeatureEncoder
 from gnss_denied_nav.interfaces.contracts import EmbeddingBatch
+
 
 class DINOv2FeatureEncoder(FeatureEncoder):
     """

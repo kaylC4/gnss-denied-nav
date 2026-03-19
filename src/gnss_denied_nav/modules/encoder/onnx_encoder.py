@@ -1,8 +1,11 @@
 """Stub — FeatureEncoder via ONNX Runtime (CPU embedded)."""
 from __future__ import annotations
+
 import numpy as np
+
 from gnss_denied_nav.interfaces.base import FeatureEncoder
 from gnss_denied_nav.interfaces.contracts import EmbeddingBatch
+
 
 class OnnxFeatureEncoder(FeatureEncoder):
     """

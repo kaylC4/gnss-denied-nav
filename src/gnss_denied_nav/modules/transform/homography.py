@@ -1,8 +1,11 @@
 """Stub — ViewTransformer via omografia inversa (drone → ortometrico)."""
 from __future__ import annotations
+
 import numpy as np
+
 from gnss_denied_nav.interfaces.base import ViewTransformer
 from gnss_denied_nav.interfaces.contracts import CameraPose, TransformedQuery
+
 
 class HomographyViewTransformer(ViewTransformer):
     """

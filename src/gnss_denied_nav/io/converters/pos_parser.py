@@ -43,6 +43,10 @@ from __future__ import annotations
 import calendar
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 class PosParser:
@@ -70,7 +74,7 @@ class PosParser:
         self._quality_max = quality_max
         self._gps_leapseconds = gps_leapseconds
 
-    def parse(self, path: str) -> "pd.DataFrame":  # type: ignore[name-defined]
+    def parse(self, path: str) -> pd.DataFrame:
         """
         Legge il file .pos e restituisce un DataFrame.
 

@@ -1,8 +1,11 @@
 """Stub — NavigationFilter EKF loosely-coupled INS + vision (RF-10/11/12)."""
 from __future__ import annotations
+
 import numpy as np
+
 from gnss_denied_nav.interfaces.base import NavigationFilter
 from gnss_denied_nav.interfaces.contracts import MatchResult, NavState
+
 
 class EKFNavigationFilter(NavigationFilter):
     """

@@ -1,8 +1,9 @@
 """Stub — PatchSampler a stride uniforme con allineamento GSD."""
 from __future__ import annotations
-import numpy as np
+
 from gnss_denied_nav.interfaces.base import PatchSampler
 from gnss_denied_nav.interfaces.contracts import PatchSet, TileMosaic
+
 
 class UniformPatchSampler(PatchSampler):
     """
