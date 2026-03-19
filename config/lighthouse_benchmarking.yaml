@@ -1,0 +1,110 @@
+# config/lighthouse_benchmarking.yaml
+# Configurazione per il dataset lighthouse_benchmarking (bag da sequenza Lighthouse)
+# Sensori: camera colore compressa, IMU Xsens, GPS NavSatFix
+#
+# Topic disponibili nel bag (verificati con rosbags inspect):
+#   /camera/image_color/compressed  → sensor_msgs/CompressedImage
+#   /imu/data                       → sensor_msgs/Imu
+#   /fix                            → sensor_msgs/NavSatFix  (GPS in ingresso)
+#   /globalEstimator/ppk_path       → nav_msgs/Path          (solo path, non NavSatFix)
+#
+# Nota: questo bag NON contiene un topic NavSatFix per il ground truth PPK.
+# gnss_gt è impostato a null — la pipeline gira senza ground truth.
+
+# ── Sorgente dati di volo ────────────────────────────────────────────────────
+dataset:
+  source: local
+
+  local:
+    path: ${LIGHTHOUSE_DATA_DIR}/lighthouse_benchmarking.bag
+
+  format: rosbag
+
+  cache:
+    dir: ${LIGHTHOUSE_DATA_DIR}/lighthouse_flat/
+    force_reconvert: false
+
+  rosbag:
+    topics:
+      camera:   /camera/image_color/compressed  # sensor_msgs/CompressedImage (JPEG)
+      imu:      /imu/data                        # sensor_msgs/Imu
+      gnss_gt:  null                             # nessun NavSatFix PPK nel bag
+      gnss_in:  /fix                             # sensor_msgs/NavSatFix
+
+# ── Sensori — parametri fisici e calibrazione ────────────────────────────────
+sensors:
+  camera:
+    hz: 10
+    # Risoluzione effettiva — verificare con /camera/camera_info nel bag
+    width: 1280
+    height: 720
+    # Intrinseci — compilare leggendo il topic /camera/camera_info
+    fx: 689.14   # PLACEHOLDER
+    fy: 689.14   # PLACEHOLDER
+    cx: 640.0    # PLACEHOLDER
+    cy: 360.0    # PLACEHOLDER
+    distortion: [0.0, 0.0, 0.0, 0.0]   # k1, k2, p1, p2 — PLACEHOLDER
+    model: pinhole_radtan
+
+  imu:
+    hz: 400
+    # Xsens MTi — valori tipici, verificare con Allan Variance sul dataset
+    accel_noise_density: 0.005     # m/s^2/sqrt(Hz)
+    gyro_noise_density: 0.001      # rad/s/sqrt(Hz)
+    accel_random_walk: 0.0002      # m/s^3/sqrt(Hz)
+    gyro_random_walk: 0.00003      # rad/s^2/sqrt(Hz)
+
+  gnss:
+    hz: 5
+    deny_after_s: null             # null = usa GPS reale, float = simula deny dopo N sec
+
+  altitude_agl:
+    source: gnss_minus_dem
+    dem_path: ${SRTM_DATA_DIR}/lighthouse_area.tif   # PLACEHOLDER — area da definire
+
+# Trasformazioni estrinseci (da calibration del rig Lighthouse)
+extrinsics:
+  T_cam_imu:
+    - [1.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0]
+    - [0.0, 0.0, 1.0, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]        # PLACEHOLDER — sostituire con valori reali
+
+pipeline:
+  pose_estimator: ins_radalt
+
+  tile_provider:
+    backend: offline_mbtiles
+    params:
+      mbtiles_path: ${LIGHTHOUSE_DATA_DIR}/tiles/lighthouse_area.mbtiles
+
+  patch_sampler:
+    backend: uniform_stride
+    params:
+      stride_px: 64
+
+  patch_size_px: 256
+
+  view_transformer: homography_inverse
+
+  feature_encoder:
+    backend: onnx
+    params:
+      checkpoint: ${ENCODER_WEIGHTS_DIR}/dinov2_vits14.onnx
+      input_size: 224
+
+  retrieval_engine:
+    backend: faiss_flat
+
+  navigation_filter:
+    backend: ekf_loosely_coupled
+    params:
+      chi2_gate: 5.99
+      R_min_m2: 25.0
+      Q_accel: 0.005
+      Q_gyro: 0.001
+
+evaluation:
+  min_match_score: 0.65
+  log_outliers: true
+  output_dir: outputs/lighthouse_benchmarking/

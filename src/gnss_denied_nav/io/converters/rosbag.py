@@ -132,8 +132,10 @@ class RosbagConverter(Converter):
 
                 # ── GNSS (ground truth e input) ───────────────────────────────
                 elif topic in (
-                    self._topics.get("gnss_gt"),
-                    self._topics.get("gnss_in"),
+                    t for t in (
+                        self._topics.get("gnss_gt"),
+                        self._topics.get("gnss_in"),
+                    ) if t is not None
                 ):
                     msg = bag.deserialize(rawdata, msgtype)
                     is_gt = (topic == self._topics.get("gnss_gt"))
@@ -152,10 +154,15 @@ class RosbagConverter(Converter):
                 elif topic == self._topics.get("camera"):
                     msg = bag.deserialize(rawdata, msgtype)
 
-                    # sensor_msgs/Image → numpy array
-                    img_np = np.frombuffer(msg.data, dtype=np.uint8).reshape(
-                        msg.height, msg.width, -1
-                    )
+                    if "CompressedImage" in msgtype:
+                        # sensor_msgs/CompressedImage → numpy array via JPEG/PNG decode
+                        buf = np.frombuffer(msg.data, dtype=np.uint8)
+                        img_np = cv2.imdecode(buf, cv2.IMREAD_COLOR)
+                    else:
+                        # sensor_msgs/Image → numpy array (raw)
+                        img_np = np.frombuffer(msg.data, dtype=np.uint8).reshape(
+                            msg.height, msg.width, -1
+                        )
                     # ROS pubblica BGR — salviamo PNG
                     filename = f"{timestamp_ns}.png"
                     cv2.imwrite(str(out / "images" / filename), img_np)
