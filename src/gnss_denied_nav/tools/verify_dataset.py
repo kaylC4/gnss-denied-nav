@@ -46,6 +46,7 @@ WHITE = "#ffffff"
 
 # ── widget helpers ────────────────────────────────────────────────────────────
 
+
 def _style_ax(ax: object) -> None:
     """Applica la palette scura a un Axes matplotlib."""
     ax.set_facecolor(PANEL_BG)
@@ -61,6 +62,7 @@ def _dark_figure(w: float, h: float) -> Figure:
 
 
 # ── applicazione principale ───────────────────────────────────────────────────
+
 
 class DatasetViewer(tk.Tk):
     """Finestra principale del visualizzatore di dataset flat."""
@@ -99,19 +101,33 @@ class DatasetViewer(tk.Tk):
 
         # Pulsante Sfoglia
         tk.Button(
-            bar, text="SFOGLIA", command=self._browse,
-            bg=ACCENT, fg=WHITE, font=("Helvetica", 10, "bold"),
-            relief="flat", padx=12, pady=4, cursor="hand2",
-            activebackground="#6d28d9", activeforeground=WHITE,
+            bar,
+            text="SFOGLIA",
+            command=self._browse,
+            bg=ACCENT,
+            fg=WHITE,
+            font=("Helvetica", 10, "bold"),
+            relief="flat",
+            padx=12,
+            pady=4,
+            cursor="hand2",
+            activebackground="#6d28d9",
+            activeforeground=WHITE,
         ).pack(side="left")
 
         # Campo path
         self._path_var = tk.StringVar(value="Seleziona una cartella dataset flat…")
         tk.Entry(
-            bar, textvariable=self._path_var,
-            bg=PANEL_BG, fg=TEXT_FG, insertbackground=TEXT_FG,
-            font=("Helvetica", 10), relief="flat", width=54,
-            disabledbackground=PANEL_BG, disabledforeground=MUTED,
+            bar,
+            textvariable=self._path_var,
+            bg=PANEL_BG,
+            fg=TEXT_FG,
+            insertbackground=TEXT_FG,
+            font=("Helvetica", 10),
+            relief="flat",
+            width=54,
+            disabledbackground=PANEL_BG,
+            disabledforeground=MUTED,
         ).pack(side="left", padx=(8, 20), ipady=4)
 
         # Badge GPS  ● GPS
@@ -122,34 +138,35 @@ class DatasetViewer(tk.Tk):
 
         # Altitude
         self._alt_var = tk.StringVar(value="ALTITUDE: — m")
-        tk.Label(bar, textvariable=self._alt_var, bg=BG, fg=TEXT_FG,
-                 font=("Helvetica", 10)).pack(side="left", padx=(18, 0))
+        tk.Label(bar, textvariable=self._alt_var, bg=BG, fg=TEXT_FG, font=("Helvetica", 10)).pack(
+            side="left", padx=(18, 0)
+        )
 
         # Time
         self._time_var = tk.StringVar(value="TIME: --:--:-- GMT")
-        tk.Label(bar, textvariable=self._time_var, bg=BG, fg=TEXT_FG,
-                 font=("Helvetica", 10)).pack(side="left", padx=(18, 0))
+        tk.Label(bar, textvariable=self._time_var, bg=BG, fg=TEXT_FG, font=("Helvetica", 10)).pack(
+            side="left", padx=(18, 0)
+        )
 
     def _build_panels(self) -> None:
         container = tk.Frame(self, bg=BG)
         container.pack(fill="both", expand=True, padx=14, pady=4)
 
         # ── Immagine drone ──────────────────────────────────────────────────
-        left = tk.Frame(container, bg=PANEL_BG, highlightbackground=BORDER,
-                        highlightthickness=1)
+        left = tk.Frame(container, bg=PANEL_BG, highlightbackground=BORDER, highlightthickness=1)
         left.pack(side="left", fill="both", expand=True, padx=(0, 5))
-        tk.Label(left, text="IMMAGINE DRONE", bg=PANEL_BG, fg=MUTED,
-                 font=("Helvetica", 8, "bold")).pack(pady=(5, 0))
-        self._img_label = tk.Label(left, bg=PANEL_BG, text="—",
-                                   fg=MUTED, font=("Helvetica", 24))
+        tk.Label(
+            left, text="IMMAGINE DRONE", bg=PANEL_BG, fg=MUTED, font=("Helvetica", 8, "bold")
+        ).pack(pady=(5, 0))
+        self._img_label = tk.Label(left, bg=PANEL_BG, text="—", fg=MUTED, font=("Helvetica", 24))
         self._img_label.pack(fill="both", expand=True, padx=5, pady=5)
 
         # ── Posa drone (IMU) ────────────────────────────────────────────────
-        mid = tk.Frame(container, bg=PANEL_BG, highlightbackground=BORDER,
-                       highlightthickness=1)
+        mid = tk.Frame(container, bg=PANEL_BG, highlightbackground=BORDER, highlightthickness=1)
         mid.pack(side="left", fill="both", expand=True, padx=5)
-        tk.Label(mid, text="POSA DRONE", bg=PANEL_BG, fg=MUTED,
-                 font=("Helvetica", 8, "bold")).pack(pady=(5, 0))
+        tk.Label(
+            mid, text="POSA DRONE", bg=PANEL_BG, fg=MUTED, font=("Helvetica", 8, "bold")
+        ).pack(pady=(5, 0))
         self._imu_fig = _dark_figure(3.8, 2.6)
         self._imu_ax = self._imu_fig.add_subplot(111)
         _style_ax(self._imu_ax)
@@ -158,11 +175,11 @@ class DatasetViewer(tk.Tk):
         self._imu_canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
 
         # ── Traiettoria GPS / PPK ───────────────────────────────────────────
-        right = tk.Frame(container, bg=PANEL_BG, highlightbackground=BORDER,
-                         highlightthickness=1)
+        right = tk.Frame(container, bg=PANEL_BG, highlightbackground=BORDER, highlightthickness=1)
         right.pack(side="left", fill="both", expand=True, padx=(5, 0))
-        tk.Label(right, text="GPS  vs  PPK", bg=PANEL_BG, fg=MUTED,
-                 font=("Helvetica", 8, "bold")).pack(pady=(5, 0))
+        tk.Label(
+            right, text="GPS  vs  PPK", bg=PANEL_BG, fg=MUTED, font=("Helvetica", 8, "bold")
+        ).pack(pady=(5, 0))
         self._traj_fig = _dark_figure(3.8, 2.6)
         self._traj_ax = self._traj_fig.add_subplot(111)
         _style_ax(self._traj_ax)
@@ -175,7 +192,11 @@ class DatasetViewer(tk.Tk):
         bottom.pack(fill="x", padx=14, pady=(2, 10))
 
         self._frame_label = tk.Label(
-            bottom, text="frame — / —", bg=BG, fg=MUTED, font=("Helvetica", 9),
+            bottom,
+            text="frame — / —",
+            bg=BG,
+            fg=MUTED,
+            font=("Helvetica", 9),
         )
         self._frame_label.pack(side="right", padx=6)
 
@@ -184,14 +205,20 @@ class DatasetViewer(tk.Tk):
         style.theme_use("clam")
         style.configure(
             "Flat.Horizontal.TScale",
-            background=BG, troughcolor=PANEL_BG,
-            sliderthickness=18, sliderrelief="flat",
+            background=BG,
+            troughcolor=PANEL_BG,
+            sliderthickness=18,
+            sliderrelief="flat",
         )
 
         self._slider_var = tk.DoubleVar(value=0)
         self._slider = ttk.Scale(
-            bottom, from_=0, to=0, orient="horizontal",
-            variable=self._slider_var, command=self._on_slider,
+            bottom,
+            from_=0,
+            to=0,
+            orient="horizontal",
+            variable=self._slider_var,
+            command=self._on_slider,
             style="Flat.Horizontal.TScale",
         )
         self._slider.pack(fill="x")
@@ -316,8 +343,11 @@ class DatasetViewer(tk.Tk):
         ax.axvline(0.0, color=WHITE, linewidth=0.8, linestyle="--", alpha=0.6)
 
         ax.legend(
-            fontsize=6, facecolor=PANEL_BG, edgecolor=BORDER,
-            labelcolor=TEXT_FG, loc="upper right",
+            fontsize=6,
+            facecolor=PANEL_BG,
+            edgecolor=BORDER,
+            labelcolor=TEXT_FG,
+            loc="upper right",
         )
         ax.set_xlabel("t [s]", color=MUTED, fontsize=7)
         self._imu_fig.tight_layout(pad=0.4)
@@ -335,15 +365,26 @@ class DatasetViewer(tk.Tk):
         ppk = self._gnss_df[self._gnss_df["is_gt"].astype(bool)]
 
         if len(gps):
-            ax.plot(gps["lon"], gps["lat"],
-                    color=GPS_COLOR, linewidth=1.0, linestyle=":", label="GPS", alpha=0.85)
+            ax.plot(
+                gps["lon"],
+                gps["lat"],
+                color=GPS_COLOR,
+                linewidth=1.0,
+                linestyle=":",
+                label="GPS",
+                alpha=0.85,
+            )
         if len(ppk):
-            ax.plot(ppk["lon"], ppk["lat"],
-                    color=PPK_COLOR, linewidth=1.3, linestyle="-", label="PPK")
+            ax.plot(
+                ppk["lon"], ppk["lat"], color=PPK_COLOR, linewidth=1.3, linestyle="-", label="PPK"
+            )
 
         ax.legend(
-            fontsize=6, facecolor=PANEL_BG, edgecolor=BORDER,
-            labelcolor=TEXT_FG, loc="upper right",
+            fontsize=6,
+            facecolor=PANEL_BG,
+            edgecolor=BORDER,
+            labelcolor=TEXT_FG,
+            loc="upper right",
         )
         ax.set_xlabel("lon", color=MUTED, fontsize=7)
         ax.set_ylabel("lat", color=MUTED, fontsize=7)
@@ -376,8 +417,13 @@ class DatasetViewer(tk.Tk):
         if idx >= 0:
             r = gps.iloc[idx]
             (dot,) = ax.plot(
-                float(r["lon"]), float(r["lat"]),
-                "o", color=WHITE, markersize=5, zorder=6, markeredgewidth=0,
+                float(r["lon"]),
+                float(r["lat"]),
+                "o",
+                color=WHITE,
+                markersize=5,
+                zorder=6,
+                markeredgewidth=0,
             )
             self._cursor_dot = dot
 
@@ -407,6 +453,7 @@ class DatasetViewer(tk.Tk):
 
 
 # ── entry point ───────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     app = DatasetViewer()
