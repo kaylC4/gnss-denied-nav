@@ -109,7 +109,7 @@ class FlatDataLoader(DataLoader):
         """
         lo = int(np.searchsorted(self._imu_ts, prev_ts, side="right"))
         hi = int(np.searchsorted(self._imu_ts, ts, side="right"))
-        return self._imu_data[lo:hi]  # shape (N, 7) — può essere (0, 7) se N=0
+        return np.asarray(self._imu_data[lo:hi])  # shape (N, 7) — può essere (0, 7) se N=0
 
     def _last_gnss_fix(self, ts: int) -> tuple[LatLon | None, float]:
         """

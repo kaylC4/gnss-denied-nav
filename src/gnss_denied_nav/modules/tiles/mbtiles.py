@@ -1,4 +1,5 @@
 """Stub — TileProvider offline da archivio MBTiles locale."""
+
 from __future__ import annotations
 
 from gnss_denied_nav.interfaces.base import TileProvider

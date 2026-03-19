@@ -1,4 +1,5 @@
 """Stub — TileProvider online via Google Maps Static API."""
+
 from __future__ import annotations
 
 from gnss_denied_nav.interfaces.base import TileProvider

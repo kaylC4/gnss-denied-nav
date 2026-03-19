@@ -12,7 +12,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from gnss_denied_nav.interfaces.base import (
     FeatureEncoder,

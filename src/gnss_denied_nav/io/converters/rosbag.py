@@ -76,6 +76,7 @@ Uso — caso 3 (nessun PPK)
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from gnss_denied_nav.interfaces.base import Converter
 
@@ -141,14 +142,14 @@ class RosbagConverter(Converter):
 
         # ── import lazy: rosbags è opzionale ─────────────────────────────────
         try:
-            from rosbags.rosbag1 import Reader  # type: ignore[import]
+            from rosbags.rosbag1 import Reader
         except ImportError as exc:
             raise RuntimeError(
                 "Il pacchetto 'rosbags' non è installato.\nEsegui: pip install rosbags"
             ) from exc
 
         try:
-            import cv2  # type: ignore[import]
+            import cv2
             import numpy as np
             import pandas as pd
         except ImportError as exc:
@@ -159,9 +160,9 @@ class RosbagConverter(Converter):
         out.mkdir(parents=True, exist_ok=True)
         (out / "images").mkdir(exist_ok=True)
 
-        imu_rows: list[dict] = []
-        gnss_rows: list[dict] = []
-        frame_rows: list[dict] = []
+        imu_rows: list[dict[str, Any]] = []
+        gnss_rows: list[dict[str, Any]] = []
+        frame_rows: list[dict[str, Any]] = []
 
         with Reader(source) as bag:
             for connection, timestamp_ns, rawdata in bag.messages():
@@ -210,7 +211,6 @@ class RosbagConverter(Converter):
                 # ── Camera ────────────────────────────────────────────────────
                 elif topic == self._topics.get("camera"):
                     msg = bag.deserialize(rawdata, msgtype)
-
                     if "CompressedImage" in msgtype:
                         # sensor_msgs/CompressedImage → numpy via JPEG/PNG decode
                         buf = np.frombuffer(msg.data, dtype=np.uint8)
@@ -220,6 +220,8 @@ class RosbagConverter(Converter):
                         img_np = np.frombuffer(msg.data, dtype=np.uint8).reshape(
                             msg.height, msg.width, -1
                         )
+                    if img_np is None:
+                        continue
                     # ROS pubblica BGR — salviamo PNG
                     filename = f"{timestamp_ns}.png"
                     cv2.imwrite(str(out / "images" / filename), img_np)
