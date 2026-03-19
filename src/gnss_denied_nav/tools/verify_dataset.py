@@ -23,7 +23,6 @@ import tkinter as tk
 from datetime import datetime, timezone
 from pathlib import Path
 from tkinter import filedialog, ttk
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -73,15 +72,15 @@ class DatasetViewer(tk.Tk):
         self.minsize(900, 520)
 
         # stato dataset
-        self._root_path: Optional[Path] = None
-        self._frames_df: Optional[pd.DataFrame] = None
-        self._imu_df: Optional[pd.DataFrame] = None
-        self._gnss_df: Optional[pd.DataFrame] = None
+        self._root_path: Path | None = None
+        self._frames_df: pd.DataFrame | None = None
+        self._imu_df: pd.DataFrame | None = None
+        self._gnss_df: pd.DataFrame | None = None
         self._n_frames: int = 0
         self._current_idx: int = 0
 
         # handle cursore traiettoria
-        self._cursor_dot: Optional[object] = None
+        self._cursor_dot: object | None = None
         self._traj_xlim: tuple[float, float] = (0.0, 1.0)
         self._traj_ylim: tuple[float, float] = (0.0, 1.0)
 
