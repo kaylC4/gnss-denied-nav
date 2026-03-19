@@ -1,8 +1,10 @@
 """Stub — PatchSampler a stride uniforme con allineamento GSD."""
+
 from __future__ import annotations
-import numpy as np
+
 from gnss_denied_nav.interfaces.base import PatchSampler
 from gnss_denied_nav.interfaces.contracts import PatchSet, TileMosaic
+
 
 class UniformPatchSampler(PatchSampler):
     """
@@ -11,6 +13,7 @@ class UniformPatchSampler(PatchSampler):
         - Sliding window con stride configurabile
         - Calcolo coordinate geografiche del centro di ogni patch tramite interpolazione bbox
     """
+
     def __init__(self, stride_px: int = 64) -> None:
         self._stride = stride_px
 

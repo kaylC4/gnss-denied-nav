@@ -1,8 +1,8 @@
 """Stub — PoseEstimator basato su INS + quota AGL."""
+
 from __future__ import annotations
 
 import numpy as np
-from scipy.spatial.transform import Rotation
 
 from gnss_denied_nav.interfaces.base import PoseEstimator
 from gnss_denied_nav.interfaces.contracts import CameraPose
@@ -28,9 +28,7 @@ class InsRadAltPoseEstimator(PoseEstimator):
     ) -> CameraPose:
         # Placeholder: usa l'ultimo campione IMU per derivare assetto
         # imu_window shape: (N, 7) [ts_ns, ax, ay, az, gx, gy, gz]
-        raise NotImplementedError(
-            "InsRadAltPoseEstimator.estimate() — da implementare"
-        )
+        raise NotImplementedError("InsRadAltPoseEstimator.estimate() — da implementare")
 
     @property
     def name(self) -> str:

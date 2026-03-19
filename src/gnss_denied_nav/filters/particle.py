@@ -1,8 +1,12 @@
 """Stub — NavigationFilter Particle Filter (alternativa non-lineare)."""
+
 from __future__ import annotations
+
 import numpy as np
+
 from gnss_denied_nav.interfaces.base import NavigationFilter
 from gnss_denied_nav.interfaces.contracts import MatchResult, NavState
+
 
 class ParticleNavigationFilter(NavigationFilter):
     """
@@ -10,6 +14,7 @@ class ParticleNavigationFilter(NavigationFilter):
     propagare con modello cinematico + rumore, pesare con match_score,
     resampling sistematico, stima da media pesata.
     """
+
     def __init__(self, n_particles: int = 500) -> None:
         self._n = n_particles
 

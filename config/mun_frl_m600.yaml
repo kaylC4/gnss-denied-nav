@@ -2,6 +2,70 @@
 # Configurazione per sequenze DJI-M600 del dataset MUN-FRL
 # Compila i valori effettivi leggendo calibration.yaml dalla sequenza scaricata
 
+# ── Sorgente dati di volo ────────────────────────────────────────────────────
+#
+# source: local    → il file è già su disco al path indicato sotto
+# source: download → scarica automaticamente prima di eseguire la pipeline
+#
+# format supportati al momento: rosbag
+# (altri formati verranno aggiunti in seguito)
+#
+dataset:
+  source: local              # "local" | "download"
+
+  local:
+    path: ${MUN_FRL_DATA_DIR}/quarry1_synced.bag   # path al .bag già scaricato
+
+  download:
+    # Decommentare e compilare solo se source: download
+    # url: https://vault.cs.mun.ca/mun-frl/quarry1_synced.bag  # link diretto al file
+    # sequence: quarry1                                          # nome sequenza (per log)
+    destination: ${MUN_FRL_DATA_DIR}/                          # cartella di destinazione
+
+  format: rosbag             # unico formato supportato al momento
+
+  # ── Cache flat ────────────────────────────────────────────────────────────
+  # Il Converter trasforma il bag nel formato flat una volta sola.
+  # Tutti i run successivi leggono direttamente da cache_dir — ROS non serve.
+  #
+  # Struttura prodotta in cache_dir:
+  #   imu.parquet      [timestamp_ns, ax, ay, az, gx, gy, gz]
+  #   gnss.parquet     [timestamp_ns, lat, lon, alt_wgs84_m, alt_agl_m, is_gt]
+  #   frames.parquet   [timestamp_ns, filename]
+  #   images/<ts>.png
+  #
+  cache:
+    dir: ${MUN_FRL_DATA_DIR}/quarry1_flat/   # dove salvare il formato flat
+    force_reconvert: false                   # true = riconverte anche se cache esiste
+
+  rosbag:
+    # Mappa topic ROS → ruolo nel sistema.
+    # Aprire il bag con: rosbag info <file.bag>  per verificare i nomi reali.
+    topics:
+      camera:   /camera/image_raw    # immagini drone (sensor_msgs/Image)
+      imu:      /imu/data            # dati IMU (sensor_msgs/Imu)
+      gnss_gt:  /fix_ppk             # ground truth GPS post-processato (sensor_msgs/NavSatFix)
+      gnss_in:  /fix                 # ultimo fix GPS in ingresso (sensor_msgs/NavSatFix)
+
+  # ── Ground truth PPK ────────────────────────────────────────────────────────
+  # Tre casi possibili:
+  #
+  #   source: rosbag     → il PPK è già un topic nel bag (gnss_gt sopra).
+  #                         pos_file viene ignorato.
+  #
+  #   source: pos_file   → il PPK NON è nel bag; si carica da un file RTKLIB .pos.
+  #                         Impostare gnss_gt: null nei topics e compilare pos_file.
+  #
+  #   source: null       → nessun PPK disponibile.
+  #                         gnss.parquet non avrà righe is_gt=True.
+  #
+  ppk:
+    source: rosbag         # "rosbag" | "pos_file" | null
+    pos_file: null         # path al .pos (usato solo se source: pos_file)
+    quality_max: 1         # Q <= quality_max: 1=fix, 2=fix+float
+    gps_leapseconds: 18    # offset GPS Time − UTC [s] (18 s dopo 2017-01-01)
+
+# ── Sensori — parametri fisici e calibrazione ────────────────────────────────
 sensors:
   camera:
     hz: 10
@@ -25,9 +89,8 @@ sensors:
 
   gnss:
     hz: 5
-    topic_gt: /fix_ppk             # ground truth post-processato
-    topic_input: /fix              # ultimo fix valido per search area
     deny_after_s: null             # null = usa GPS reale, float = simula deny dopo N sec
+    # I nomi dei topic sono in dataset.rosbag.topics
 
   altitude_agl:
     source: gnss_minus_dem         # quota ellissoidica WGS84 - DEM locale
