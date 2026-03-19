@@ -26,8 +26,10 @@ from tkinter import filedialog, ttk
 
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from PIL import Image, ImageTk
 
 # ── palette ──────────────────────────────────────────────────────────────────
@@ -47,7 +49,7 @@ WHITE = "#ffffff"
 # ── widget helpers ────────────────────────────────────────────────────────────
 
 
-def _style_ax(ax: object) -> None:
+def _style_ax(ax: Axes) -> None:
     """Applica la palette scura a un Axes matplotlib."""
     ax.set_facecolor(PANEL_BG)
     ax.tick_params(colors=MUTED, labelsize=7)
@@ -81,8 +83,9 @@ class DatasetViewer(tk.Tk):
         self._n_frames: int = 0
         self._current_idx: int = 0
 
-        # handle cursore traiettoria
-        self._cursor_dot: object | None = None
+        # handle cursore traiettoria e riferimento immagine
+        self._photo_ref: ImageTk.PhotoImage | None = None
+        self._cursor_dot: Line2D | None = None
         self._traj_xlim: tuple[float, float] = (0.0, 1.0)
         self._traj_ylim: tuple[float, float] = (0.0, 1.0)
 
@@ -298,10 +301,10 @@ class DatasetViewer(tk.Tk):
             # Fit nell'area disponibile preservando aspect ratio
             max_w = max(self._img_label.winfo_width(), 100)
             max_h = max(self._img_label.winfo_height(), 80)
-            img.thumbnail((max_w, max_h), Image.LANCZOS)
+            img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
+            self._photo_ref = photo  # evita garbage collection
             self._img_label.configure(image=photo, text="")
-            self._img_label.image = photo  # evita garbage collection
         except Exception as exc:
             self._img_label.configure(image="", text=f"⚠ {exc}")
 
