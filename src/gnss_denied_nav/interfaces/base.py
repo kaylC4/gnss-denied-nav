@@ -9,6 +9,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
+from collections.abc import Iterator
+
 from gnss_denied_nav.interfaces.contracts import (
     CameraPose,
     EmbeddingBatch,
@@ -16,9 +18,72 @@ from gnss_denied_nav.interfaces.contracts import (
     MatchResult,
     NavState,
     PatchSet,
+    SensorFrame,
     TileMosaic,
     TransformedQuery,
 )
+
+
+# ── I/O — livello indipendente dal formato sorgente ──────────────────────────
+
+class DataLoader(ABC):
+    """
+    Iteratore di SensorFrame.
+
+    Non sa nulla del formato sorgente originale (rosbag, CSV, …).
+    Legge esclusivamente il formato flat (Parquet + cartella immagini)
+    prodotto da un Converter.
+
+    Uso tipico
+    ----------
+    loader = FlatDataLoader(root="data/quarry1_flat/")
+    for frame in loader:          # frame è un SensorFrame
+        pose = pose_estimator.estimate(frame.imu_window, frame.alt_agl_m)
+        ...
+    """
+
+    @abstractmethod
+    def __iter__(self) -> Iterator[SensorFrame]: ...
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """Numero totale di frame nella sequenza."""
+        ...
+
+    @property
+    @abstractmethod
+    def name(self) -> str: ...
+
+
+class Converter(ABC):
+    """
+    Converte un formato sorgente nel formato flat ottimizzato per la pipeline.
+
+    Il formato flat prodotto è sempre:
+      <output_dir>/
+        imu.parquet      [timestamp_ns, ax, ay, az, gx, gy, gz]
+        gnss.parquet     [timestamp_ns, lat, lon, alt_wgs84_m, alt_agl_m, is_gt]
+        frames.parquet   [timestamp_ns, filename]
+        images/
+          <timestamp_ns>.png
+          ...
+
+    Ogni implementazione concreta gestisce un formato sorgente specifico
+    (rosbag, EuRoC, HILTI, …) e produce sempre lo stesso formato flat.
+    Una volta convertito, il formato sorgente non è più necessario.
+    """
+
+    @abstractmethod
+    def convert(self, source_path: str, output_dir: str) -> None:
+        """
+        Legge source_path e scrive il formato flat in output_dir.
+        Se output_dir esiste già e force=False, è un no-op.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def name(self) -> str: ...
 
 
 # ── RF-02 ────────────────────────────────────────────────────────────────────

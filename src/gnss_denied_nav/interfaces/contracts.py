@@ -76,3 +76,30 @@ class NavState:
     timestamp_ns: int
     match_score: float
     method_id: str            # identifica quale backend ha prodotto la stima
+
+
+@dataclass(frozen=True)
+class SensorFrame:
+    """
+    Un tick di camera con i dati di supporto sincronizzati.
+
+    Prodotto dal DataLoader — è l'ingresso della pipeline.
+    Il formato sorgente (rosbag, CSV, …) è già stato dimenticato.
+
+    Campi
+    -----
+    timestamp_ns  : timestamp del frame camera [ns]
+    image         : (H, W, 3) uint8 RGB
+    imu_window    : (N, 7) float64  [ts_ns, ax, ay, az, gx, gy, gz]
+                    tutti i campioni IMU tra il frame precedente e questo
+    gnss_fix      : ultimo fix GPS valido prima di questo timestamp
+                    None se non è mai arrivato nessun fix
+    alt_agl_m     : quota sopra il terreno calcolata da GNSS - DEM [m]
+    gnss_denied   : True se il GPS è stato negato a questo timestamp
+    """
+    timestamp_ns: int
+    image: np.ndarray          # (H, W, 3) uint8 RGB
+    imu_window: np.ndarray     # (N, 7) float64
+    gnss_fix: LatLon | None    # None se nessun fix ancora ricevuto
+    alt_agl_m: float
+    gnss_denied: bool

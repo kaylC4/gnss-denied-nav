@@ -24,6 +24,20 @@ dataset:
 
   format: rosbag             # unico formato supportato al momento
 
+  # ── Cache flat ────────────────────────────────────────────────────────────
+  # Il Converter trasforma il bag nel formato flat una volta sola.
+  # Tutti i run successivi leggono direttamente da cache_dir — ROS non serve.
+  #
+  # Struttura prodotta in cache_dir:
+  #   imu.parquet      [timestamp_ns, ax, ay, az, gx, gy, gz]
+  #   gnss.parquet     [timestamp_ns, lat, lon, alt_wgs84_m, alt_agl_m, is_gt]
+  #   frames.parquet   [timestamp_ns, filename]
+  #   images/<ts>.png
+  #
+  cache:
+    dir: ${MUN_FRL_DATA_DIR}/quarry1_flat/   # dove salvare il formato flat
+    force_reconvert: false                   # true = riconverte anche se cache esiste
+
   rosbag:
     # Mappa topic ROS → ruolo nel sistema.
     # Aprire il bag con: rosbag info <file.bag>  per verificare i nomi reali.
