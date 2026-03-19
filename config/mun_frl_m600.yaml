@@ -2,6 +2,38 @@
 # Configurazione per sequenze DJI-M600 del dataset MUN-FRL
 # Compila i valori effettivi leggendo calibration.yaml dalla sequenza scaricata
 
+# ── Sorgente dati di volo ────────────────────────────────────────────────────
+#
+# source: local    → il file è già su disco al path indicato sotto
+# source: download → scarica automaticamente prima di eseguire la pipeline
+#
+# format supportati al momento: rosbag
+# (altri formati verranno aggiunti in seguito)
+#
+dataset:
+  source: local              # "local" | "download"
+
+  local:
+    path: ${MUN_FRL_DATA_DIR}/quarry1_synced.bag   # path al .bag già scaricato
+
+  download:
+    # Decommentare e compilare solo se source: download
+    # url: https://vault.cs.mun.ca/mun-frl/quarry1_synced.bag  # link diretto al file
+    # sequence: quarry1                                          # nome sequenza (per log)
+    destination: ${MUN_FRL_DATA_DIR}/                          # cartella di destinazione
+
+  format: rosbag             # unico formato supportato al momento
+
+  rosbag:
+    # Mappa topic ROS → ruolo nel sistema.
+    # Aprire il bag con: rosbag info <file.bag>  per verificare i nomi reali.
+    topics:
+      camera:   /camera/image_raw    # immagini drone (sensor_msgs/Image)
+      imu:      /imu/data            # dati IMU (sensor_msgs/Imu)
+      gnss_gt:  /fix_ppk             # ground truth GPS post-processato (sensor_msgs/NavSatFix)
+      gnss_in:  /fix                 # ultimo fix GPS in ingresso (sensor_msgs/NavSatFix)
+
+# ── Sensori — parametri fisici e calibrazione ────────────────────────────────
 sensors:
   camera:
     hz: 10
@@ -25,9 +57,8 @@ sensors:
 
   gnss:
     hz: 5
-    topic_gt: /fix_ppk             # ground truth post-processato
-    topic_input: /fix              # ultimo fix valido per search area
     deny_after_s: null             # null = usa GPS reale, float = simula deny dopo N sec
+    # I nomi dei topic sono in dataset.rosbag.topics
 
   altitude_agl:
     source: gnss_minus_dem         # quota ellissoidica WGS84 - DEM locale
