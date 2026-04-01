@@ -38,17 +38,47 @@ NavigationFilter─→  NavState           (lat, lon, covarianza)
 
 ## Installazione
 
+### 1. Dipendenze di sistema (macOS)
+
+Richiede [Homebrew](https://brew.sh). Installa Python 3.12 e le librerie di sistema necessarie:
+
+```bash
+brew install python@3.12 gdal python-tk@3.12
+```
+
+> **Nota:** `gdal` è richiesto da `rasterio` e ha molte dipendenze — l'installazione può richiedere qualche minuto e ~1 GB di spazio libero.
+
+### 2. Clona il repository
+
 ```bash
 git clone --recurse-submodules https://github.com/YOUR_USERNAME/gnss-denied-nav
 cd gnss-denied-nav
+```
 
-python -m venv .venv && source .venv/bin/activate
+### 3. Ambiente virtuale
 
-pip install -e ".[dev]"
+```bash
+/usr/local/bin/python3.12 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -e ".[dev,viz]"
+```
 
+### 4. Variabili d'ambiente
+
+```bash
 cp .env.example .env
 # Compila .env con le chiavi API reali
 ```
+
+Per attivare l'ambiente in sessioni future:
+
+```bash
+source .venv/bin/activate   # all'inizio
+deactivate                   # alla fine
+```
+
+---
 
 ## Dataset — MUN-FRL
 
@@ -56,14 +86,41 @@ Scarica le sequenze dal sito ufficiale: https://mun-frl-vil-dataset.readthedocs.
 
 Sequenza consigliata per iniziare: **DJI-M600 Quarry-1** (300 m, paesaggio aperto).
 
-```bash
-# Estrai il ROS bag in formato flat (no ROS required)
-python -m gnss_denied_nav.tools.extract_bag \
-    --bag path/to/quarry1_synced.bag \
-    --out data/quarry1/
+### Estrazione del bag (flatting)
 
-# Scarica DEM SRTM per l'area (necessario per quota AGL)
-python scripts/download_dem.py --sequence quarry1
+Converte un ROS 1 bag (`.bag`) in formato flat (Parquet + immagini PNG). Non richiede ROS installato.
+
+```bash
+extract-bag --bag data/lighthouse.bag --out data/lighthouse_flat/
+```
+
+L'output prodotto in `data/lighthouse_flat/` sarà:
+
+```
+lighthouse_flat/
+├── imu.parquet         # [timestamp_ns, ax, ay, az, gx, gy, gz]
+├── gnss.parquet        # [timestamp_ns, lat, lon, alt_wgs84_m, alt_agl_m, is_gt]
+├── odometry.parquet    # [timestamp_ns, roll_deg, pitch_deg, yaw_deg]
+├── frames.parquet      # [timestamp_ns, filename]
+└── images/
+    └── <timestamp_ns>.png
+```
+
+> **Note:** `alt_agl_m` è `NaN` finché non viene eseguito il post-processing con un DEM. `odometry.parquet` contiene roll/pitch/yaw fusi dal topic `/Odometry` (VINS o LiDAR odometry) — nessuna deriva.
+
+Per usare un topic odometry diverso:
+
+```bash
+extract-bag --bag data/lighthouse.bag --out data/lighthouse_flat/ \
+    --odometry-topic /vins_estimator/odometry
+```
+
+### Visualizzazione del dataset (GUI)
+
+Apre la GUI di ispezione del dataset estratto:
+
+```bash
+verify-dataset data/lighthouse_flat/
 ```
 
 ## Utilizzo

@@ -51,6 +51,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Topic GNSS ground truth nel bag (default: nessuno).",
     )
+    p.add_argument(
+        "--odometry-topic",
+        default="/Odometry",
+        help="Topic nav_msgs/Odometry per roll/pitch/yaw (default: /Odometry).",
+    )
 
     # ── PPK da file .pos ────────────────────────────────────────────────────
     p.add_argument(
@@ -87,10 +92,11 @@ def main(argv: list[str] | None = None) -> None:
 
     converter = RosbagConverter(
         topics={
-            "camera": args.camera_topic,
-            "imu": args.imu_topic,
-            "gnss_gt": args.gnss_gt_topic,
-            "gnss_in": args.gnss_topic,
+            "camera":    args.camera_topic,
+            "imu":       args.imu_topic,
+            "gnss_gt":   args.gnss_gt_topic,
+            "gnss_in":   args.gnss_topic,
+            "odometry":  args.odometry_topic,
         },
         force=args.force,
         ppk_pos_path=args.pos,
@@ -98,9 +104,21 @@ def main(argv: list[str] | None = None) -> None:
         ppk_gps_leapseconds=args.ppk_leapseconds,
     )
 
+    import time
+    from pathlib import Path
+
     print(f"Conversione: {args.bag} → {args.out}")
+    t0 = time.monotonic()
     converter.convert(source_path=args.bag, output_dir=args.out)
-    print("Fatto.")
+    elapsed = time.monotonic() - t0
+
+    out = Path(args.out)
+    n_images = len(list((out / "images").glob("*.png"))) if (out / "images").exists() else 0
+    size_mb = sum(f.stat().st_size for f in out.rglob("*") if f.is_file()) / 1_048_576
+
+    print(f"\n  Completato in {elapsed:.1f}s")
+    print(f"  Immagini estratte : {n_images:,}")
+    print(f"  Dimensione output : {size_mb:.1f} MB  ({args.out})")
 
 
 if __name__ == "__main__":

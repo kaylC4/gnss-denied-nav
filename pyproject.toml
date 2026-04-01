@@ -33,6 +33,8 @@ dependencies = [
 
     # ROS bag parsing (no ROS required)
     "rosbags>=0.9",
+    "pandas>=2.0",
+    "pyarrow>=14.0",
 
     # Config
     "pyyaml>=6.0",

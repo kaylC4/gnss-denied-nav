@@ -148,7 +148,7 @@ class PosParser:
                 "lat": df_raw["lat"].values,
                 "lon": df_raw["lon"].values,
                 "alt_wgs84_m": df_raw["height"].values,
-                "alt_agl_m": 0.0,  # sovrascritta più avanti dalla pipeline
+                "alt_agl_m": float("nan"),  # calcolata con DEM in post-processing
                 "is_gt": True,
                 "q_flag": df_raw["Q"].values,
             }
