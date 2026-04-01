@@ -80,6 +80,11 @@ python_version = "3.10"
 strict = true
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# matplotlib/tkinter non hanno stubs completi — disabilitiamo solo untyped-call
+module = "gnss_denied_nav.tools.verify_dataset"
+disallow_untyped_calls = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts   = "--cov=gnss_denied_nav --cov-report=term-missing -v"

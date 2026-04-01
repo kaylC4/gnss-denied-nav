@@ -189,6 +189,7 @@ class RosbagConverter(Converter):
             for connection, _bag_ts, rawdata in bag.messages():
                 topic = connection.topic
                 msgtype = connection.msgtype
+                msg: Any  # tipo dichiarato una volta; assegnato nel branch corretto
 
                 # ── IMU ───────────────────────────────────────────────────────
                 if topic == self._topics.get("imu"):
