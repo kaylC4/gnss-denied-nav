@@ -146,7 +146,7 @@ class RosbagConverter(Converter):
         # ── import lazy: rosbags è opzionale ─────────────────────────────────
         try:
             from rosbags.rosbag1 import Reader
-            from rosbags.typesys import get_typestore, Stores
+            from rosbags.typesys import Stores, get_typestore
         except ImportError as exc:
             raise RuntimeError(
                 "Il pacchetto 'rosbags' non è installato.\nEsegui: pip install rosbags"

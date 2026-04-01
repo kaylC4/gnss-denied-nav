@@ -181,14 +181,14 @@ def test_180deg_heading_same_size() -> None:
 # ── test save_mask ────────────────────────────────────────────────────────────
 
 
-def test_save_mask_creates_file(tmp_path: "pytest.TempPathFactory") -> None:
+def test_save_mask_creates_file(tmp_path: pytest.TempPathFactory) -> None:
     result = north_align(_solid(), 45.0)
     out = tmp_path / "mask.png"
     save_mask(result.mask, out)
     assert out.exists()
 
 
-def test_save_mask_values_are_0_or_255(tmp_path: "pytest.TempPathFactory") -> None:
+def test_save_mask_values_are_0_or_255(tmp_path: pytest.TempPathFactory) -> None:
     import cv2
 
     result = north_align(_solid(), 45.0)
@@ -200,7 +200,7 @@ def test_save_mask_values_are_0_or_255(tmp_path: "pytest.TempPathFactory") -> No
     assert unique_vals.issubset({0, 255})
 
 
-def test_save_mask_roundtrip(tmp_path: "pytest.TempPathFactory") -> None:
+def test_save_mask_roundtrip(tmp_path: pytest.TempPathFactory) -> None:
     """Caricando la PNG salvata si ottiene la stessa maschera booleana."""
     import cv2
 

@@ -202,8 +202,6 @@ def test_legacy_string_yaml_still_loads(tmp_path: Path) -> None:
     YAML con domain_normalization: none (stringa, non dict) deve ancora
     caricarsi correttamente grazie al fallback in PreprocessingConfig.
     """
-    import yaml
-
     cfg_yaml = tmp_path / "test.yaml"
     cfg_yaml.write_text(
         """

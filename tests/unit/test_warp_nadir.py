@@ -13,7 +13,6 @@ Criteri di successo (spec §3.5):
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from gnss_denied_nav.config import CameraConfig
 from gnss_denied_nav.preprocessing.warp_nadir import (

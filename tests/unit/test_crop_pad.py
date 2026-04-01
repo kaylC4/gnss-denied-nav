@@ -145,7 +145,8 @@ def test_mask_shape_matches_image(h: int, w: int) -> None:
 
 
 def test_mask_dtype_bool() -> None:
-    result = crop_pad(_img(TARGET // 2, TARGET // 2), target_size=TARGET, mask=_mask(TARGET // 2, TARGET // 2))
+    h = w = TARGET // 2
+    result = crop_pad(_img(h, w), target_size=TARGET, mask=_mask(h, w))
     assert result.mask is not None
     assert result.mask.dtype == bool
 

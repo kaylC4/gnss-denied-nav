@@ -332,9 +332,11 @@ class DatasetViewer(tk.Tk):
 
             if len(window) > 0:
                 t_rel = (window["timestamp_ns"].to_numpy(dtype=np.float64) - ts_ns) / 1e9
-                ax.plot(t_rel, window["pitch_deg"], color=IMU_PITCH, linewidth=0.9, label="pitch °")
-                ax.plot(t_rel, window["roll_deg"],  color=IMU_ROLL,  linewidth=0.9, label="roll °")
-                ax.plot(t_rel, window["yaw_deg"],   color=IMU_YAW,   linewidth=0.9, label="yaw °")
+                ax.plot(
+                    t_rel, window["pitch_deg"], color=IMU_PITCH, linewidth=0.9, label="pitch °"
+                )
+                ax.plot(t_rel, window["roll_deg"], color=IMU_ROLL, linewidth=0.9, label="roll °")
+                ax.plot(t_rel, window["yaw_deg"], color=IMU_YAW, linewidth=0.9, label="yaw °")
                 ax.axvline(0.0, color=WHITE, linewidth=0.8, linestyle="--", alpha=0.6)
                 ax.axhline(0.0, color=MUTED, linewidth=0.4, linestyle=":", alpha=0.4)
                 ax.legend(fontsize=6, facecolor=PANEL_BG, edgecolor=BORDER,
