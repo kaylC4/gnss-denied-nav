@@ -41,8 +41,9 @@ GPS_COLOR = "#60a5fa"
 PPK_COLOR = "#34d399"
 TEXT_FG = "#e2e8f0"
 MUTED = "#64748b"
-IMU_ACC = "#f472b6"
-IMU_GYR = "#fbbf24"
+IMU_PITCH = "#f472b6"
+IMU_ROLL = "#fbbf24"
+IMU_YAW = "#60a5fa"
 WHITE = "#ffffff"
 
 
@@ -79,6 +80,7 @@ class DatasetViewer(tk.Tk):
         self._root_path: Path | None = None
         self._frames_df: pd.DataFrame | None = None
         self._imu_df: pd.DataFrame | None = None
+        self._odom_df: pd.DataFrame | None = None
         self._gnss_df: pd.DataFrame | None = None
         self._n_frames: int = 0
         self._current_idx: int = 0
@@ -258,6 +260,12 @@ class DatasetViewer(tk.Tk):
             .sort_values("timestamp_ns")
             .reset_index(drop=True)
         )
+        odom_path = root / "odometry.parquet"
+        self._odom_df = (
+            pd.read_parquet(odom_path).sort_values("timestamp_ns").reset_index(drop=True)
+            if odom_path.exists()
+            else None
+        )
         self._n_frames = len(self._frames_df)
         self._slider.configure(to=max(0, self._n_frames - 1))
         self._slider_var.set(0)
@@ -284,7 +292,7 @@ class DatasetViewer(tk.Tk):
         filename = str(row["filename"])
 
         self._update_image(filename)
-        self._update_imu_plot(ts_ns)
+        self._update_attitude_plot(ts_ns)
         self._update_trajectory_cursor(ts_ns)
         self._update_statusbar(ts_ns)
         self._frame_label.configure(text=f"frame {idx + 1} / {self._n_frames}")
@@ -308,16 +316,50 @@ class DatasetViewer(tk.Tk):
         except Exception as exc:
             self._img_label.configure(image="", text=f"⚠ {exc}")
 
-    def _update_imu_plot(self, ts_ns: int) -> None:
-        if self._imu_df is None:
-            return
+    def _update_attitude_plot(self, ts_ns: int) -> None:
         ax = self._imu_ax
         ax.cla()
         _style_ax(ax)
 
+        # ── Sorgente preferita: odometry (angoli fusi, no deriva) ─────────────
+        if self._odom_df is not None:
+            odom_ts = self._odom_df["timestamp_ns"].to_numpy(dtype=np.int64)
+            center_idx = int(np.searchsorted(odom_ts, ts_ns))
+            half = 50  # ±50 sample a ~30 Hz ≈ ±1.7 s
+            lo = max(0, center_idx - half)
+            hi = min(len(self._odom_df), center_idx + half)
+            window = self._odom_df.iloc[lo:hi]
+
+            if len(window) > 0:
+                t_rel = (window["timestamp_ns"].to_numpy(dtype=np.float64) - ts_ns) / 1e9
+                ax.plot(
+                    t_rel, window["pitch_deg"], color=IMU_PITCH, linewidth=0.9, label="pitch °"
+                )
+                ax.plot(t_rel, window["roll_deg"], color=IMU_ROLL, linewidth=0.9, label="roll °")
+                ax.plot(t_rel, window["yaw_deg"], color=IMU_YAW, linewidth=0.9, label="yaw °")
+                ax.axvline(0.0, color=WHITE, linewidth=0.8, linestyle="--", alpha=0.6)
+                ax.axhline(0.0, color=MUTED, linewidth=0.4, linestyle=":", alpha=0.4)
+                ax.legend(
+                    fontsize=6,
+                    facecolor=PANEL_BG,
+                    edgecolor=BORDER,
+                    labelcolor=TEXT_FG,
+                    loc="upper right",
+                )
+                ax.set_xlabel("t [s]", color=MUTED, fontsize=7)
+                ax.set_ylabel("gradi", color=MUTED, fontsize=7)
+                self._imu_fig.tight_layout(pad=0.4)
+                self._imu_canvas.draw()
+                return
+
+        # ── Fallback: pitch e roll dall'accelerometro IMU ─────────────────────
+        if self._imu_df is None:
+            self._imu_canvas.draw()
+            return
+
         imu_ts = self._imu_df["timestamp_ns"].to_numpy(dtype=np.int64)
         center_idx = int(np.searchsorted(imu_ts, ts_ns))
-        half = 300
+        half = 300  # ±300 sample a 400 Hz ≈ ±0.75 s
         lo = max(0, center_idx - half)
         hi = min(len(self._imu_df), center_idx + half)
         window = self._imu_df.iloc[lo:hi]
@@ -327,32 +369,21 @@ class DatasetViewer(tk.Tk):
             return
 
         t_rel = (window["timestamp_ns"].to_numpy(dtype=np.float64) - ts_ns) / 1e9
+        ax_v = window["ax"].to_numpy(dtype=np.float64)
+        ay_v = window["ay"].to_numpy(dtype=np.float64)
+        az_v = window["az"].to_numpy(dtype=np.float64)
+        pitch = np.degrees(np.arctan2(-ax_v, np.sqrt(ay_v**2 + az_v**2)))
+        roll = np.degrees(np.arctan2(ay_v, az_v))
 
-        # Norma accelerometro
-        acc = np.sqrt(
-            window["ax"].to_numpy() ** 2
-            + window["ay"].to_numpy() ** 2
-            + window["az"].to_numpy() ** 2
-        )
-        # Norma giroscopio
-        gyr = np.sqrt(
-            window["gx"].to_numpy() ** 2
-            + window["gy"].to_numpy() ** 2
-            + window["gz"].to_numpy() ** 2
-        )
-
-        ax.plot(t_rel, acc, color=IMU_ACC, linewidth=0.9, label="|a| m/s²")
-        ax.plot(t_rel, gyr, color=IMU_GYR, linewidth=0.9, label="|ω| rad/s")
+        ax.plot(t_rel, pitch, color=IMU_PITCH, linewidth=0.9, label="pitch °")
+        ax.plot(t_rel, roll, color=IMU_ROLL, linewidth=0.9, label="roll °")
         ax.axvline(0.0, color=WHITE, linewidth=0.8, linestyle="--", alpha=0.6)
-
+        ax.axhline(0.0, color=MUTED, linewidth=0.4, linestyle=":", alpha=0.4)
         ax.legend(
-            fontsize=6,
-            facecolor=PANEL_BG,
-            edgecolor=BORDER,
-            labelcolor=TEXT_FG,
-            loc="upper right",
+            fontsize=6, facecolor=PANEL_BG, edgecolor=BORDER, labelcolor=TEXT_FG, loc="upper right"
         )
         ax.set_xlabel("t [s]", color=MUTED, fontsize=7)
+        ax.set_ylabel("gradi (no yaw — riesegui extract-bag)", color=MUTED, fontsize=6)
         self._imu_fig.tight_layout(pad=0.4)
         self._imu_canvas.draw()
 

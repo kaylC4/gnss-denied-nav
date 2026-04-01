@@ -14,8 +14,9 @@ Formato flat prodotto
 ---------------------
 <output_dir>/
     imu.parquet      [timestamp_ns, ax, ay, az, gx, gy, gz]
-    gnss.parquet     [timestamp_ns, lat, lon, alt_wgs84_m, alt_agl_m, is_gt]
-    frames.parquet   [timestamp_ns, filename]
+    gnss.parquet      [timestamp_ns, lat, lon, alt_wgs84_m, alt_agl_m, is_gt]
+    odometry.parquet  [timestamp_ns, roll_deg, pitch_deg, yaw_deg]
+    frames.parquet    [timestamp_ns, filename]
     images/
         <timestamp_ns>.png
         ...
@@ -75,6 +76,8 @@ Uso — caso 3 (nessun PPK)
 
 from __future__ import annotations
 
+import math
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -143,6 +146,7 @@ class RosbagConverter(Converter):
         # ── import lazy: rosbags è opzionale ─────────────────────────────────
         try:
             from rosbags.rosbag1 import Reader
+            from rosbags.typesys import Stores, get_typestore
         except ImportError as exc:
             raise RuntimeError(
                 "Il pacchetto 'rosbags' non è installato.\nEsegui: pip install rosbags"
@@ -162,20 +166,38 @@ class RosbagConverter(Converter):
 
         imu_rows: list[dict[str, Any]] = []
         gnss_rows: list[dict[str, Any]] = []
+        odom_rows: list[dict[str, Any]] = []
         frame_rows: list[dict[str, Any]] = []
+
+        typestore = get_typestore(Stores.ROS1_NOETIC)
 
         with Reader(source) as _bag:
             bag: Any = _bag  # rosbags stubs variano tra versioni
-            for connection, timestamp_ns, rawdata in bag.messages():
+
+            total_msgs = sum(c.msgcount for c in bag.connections)
+            print(f"  Messaggi totali nel bag: {total_msgs:,}")
+            print(
+                f"  Topic attivi: camera={self._topics.get('camera')}  "
+                f"imu={self._topics.get('imu')}  gnss={self._topics.get('gnss_in')}"
+            )
+            print()
+
+            processed = 0
+            _BAR_WIDTH = 30
+            _PRINT_EVERY = max(1, total_msgs // 200)  # aggiorna ogni ~0.5%
+
+            for connection, _bag_ts, rawdata in bag.messages():
                 topic = connection.topic
                 msgtype = connection.msgtype
+                msg: Any  # tipo dichiarato una volta; assegnato nel branch corretto
 
                 # ── IMU ───────────────────────────────────────────────────────
                 if topic == self._topics.get("imu"):
-                    msg = bag.deserialize(rawdata, msgtype)
+                    msg = typestore.deserialize_ros1(rawdata, msgtype)
+                    ts = msg.header.stamp.sec * 1_000_000_000 + msg.header.stamp.nanosec
                     imu_rows.append(
                         {
-                            "timestamp_ns": timestamp_ns,
+                            "timestamp_ns": ts,
                             "ax": msg.linear_acceleration.x,
                             "ay": msg.linear_acceleration.y,
                             "az": msg.linear_acceleration.z,
@@ -194,24 +216,50 @@ class RosbagConverter(Converter):
                     )
                     if t is not None
                 ):
-                    msg = bag.deserialize(rawdata, msgtype)
+                    msg = typestore.deserialize_ros1(rawdata, msgtype)
+                    ts = msg.header.stamp.sec * 1_000_000_000 + msg.header.stamp.nanosec
                     is_gt = topic == self._topics.get("gnss_gt")
                     gnss_rows.append(
                         {
-                            "timestamp_ns": timestamp_ns,
+                            "timestamp_ns": ts,
                             "lat": msg.latitude,
                             "lon": msg.longitude,
                             "alt_wgs84_m": msg.altitude,
                             # alt_agl_m viene calcolato separatamente (GNSS - DEM);
-                            # inizializzato a 0.0, il pipeline lo sovrascrive
-                            "alt_agl_m": 0.0,
+                            # NaN finché non viene eseguito il post-processing con DEM
+                            "alt_agl_m": float("nan"),
                             "is_gt": is_gt,
+                        }
+                    )
+
+                # ── Odometry ──────────────────────────────────────────────────
+                elif topic == self._topics.get("odometry"):
+                    msg = typestore.deserialize_ros1(rawdata, msgtype)
+                    ts = msg.header.stamp.sec * 1_000_000_000 + msg.header.stamp.nanosec
+                    q = msg.pose.pose.orientation
+                    # Quaternione → roll / pitch / yaw [deg]
+                    sinr = 2.0 * (q.w * q.x + q.y * q.z)
+                    cosr = 1.0 - 2.0 * (q.x * q.x + q.y * q.y)
+                    roll_deg = math.degrees(math.atan2(sinr, cosr))
+                    sinp = 2.0 * (q.w * q.y - q.z * q.x)
+                    pitch_deg = math.degrees(
+                        math.copysign(math.pi / 2, sinp) if abs(sinp) >= 1 else math.asin(sinp)
+                    )
+                    siny = 2.0 * (q.w * q.z + q.x * q.y)
+                    cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+                    yaw_deg = math.degrees(math.atan2(siny, cosy))
+                    odom_rows.append(
+                        {
+                            "timestamp_ns": ts,
+                            "roll_deg": roll_deg,
+                            "pitch_deg": pitch_deg,
+                            "yaw_deg": yaw_deg,
                         }
                     )
 
                 # ── Camera ────────────────────────────────────────────────────
                 elif topic == self._topics.get("camera"):
-                    msg = bag.deserialize(rawdata, msgtype)
+                    msg = typestore.deserialize_ros1(rawdata, msgtype)
                     if "CompressedImage" in msgtype:
                         # sensor_msgs/CompressedImage → numpy via JPEG/PNG decode
                         buf = np.frombuffer(msg.data, dtype=np.uint8)
@@ -224,15 +272,34 @@ class RosbagConverter(Converter):
                     if img_np is None:
                         continue
                     # ROS pubblica BGR — salviamo PNG
-                    filename = f"{timestamp_ns}.png"
+                    ts = msg.header.stamp.sec * 1_000_000_000 + msg.header.stamp.nanosec
+                    filename = f"{ts}.png"
                     cv2.imwrite(str(out / "images" / filename), img_np)
 
                     frame_rows.append(
                         {
-                            "timestamp_ns": timestamp_ns,
+                            "timestamp_ns": ts,
                             "filename": filename,
                         }
                     )
+
+                processed += 1
+                if processed % _PRINT_EVERY == 0 or processed == total_msgs:
+                    pct = processed / total_msgs if total_msgs else 1.0
+                    filled = int(_BAR_WIDTH * pct)
+                    bar = "█" * filled + "░" * (_BAR_WIDTH - filled)
+                    line = (
+                        f"  [{bar}] {pct:5.1%}  "
+                        f"IMU: {len(imu_rows):5,}  "
+                        f"GNSS: {len(gnss_rows):4,}  "
+                        f"Odom: {len(odom_rows):4,}  "
+                        f"Frame: {len(frame_rows):4,}"
+                    )
+                    sys.stdout.write(f"\r\033[K{line}")
+                    sys.stdout.flush()
+
+            sys.stdout.write("\n")
+            sys.stdout.flush()
 
         # ── PPK da file .pos esterno (caso 2) ─────────────────────────────────
         # Si usa solo se gnss_gt non era un topic nel bag.
@@ -254,4 +321,5 @@ class RosbagConverter(Converter):
         # ── Scrivi Parquet ────────────────────────────────────────────────────
         pd.DataFrame(imu_rows).to_parquet(out / "imu.parquet", index=False)
         pd.DataFrame(gnss_rows).to_parquet(out / "gnss.parquet", index=False)
+        pd.DataFrame(odom_rows).to_parquet(out / "odometry.parquet", index=False)
         pd.DataFrame(frame_rows).to_parquet(out / "frames.parquet", index=False)

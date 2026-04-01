@@ -33,6 +33,8 @@ dependencies = [
 
     # ROS bag parsing (no ROS required)
     "rosbags>=0.9",
+    "pandas>=2.0",
+    "pyarrow>=14.0",
 
     # Config
     "pyyaml>=6.0",
@@ -77,6 +79,11 @@ ignore = []
 python_version = "3.10"
 strict = true
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# matplotlib/tkinter non hanno stubs completi — disabilitiamo solo untyped-call
+module = "gnss_denied_nav.tools.verify_dataset"
+disallow_untyped_calls = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
