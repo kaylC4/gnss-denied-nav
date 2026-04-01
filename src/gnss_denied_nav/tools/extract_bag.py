@@ -92,11 +92,11 @@ def main(argv: list[str] | None = None) -> None:
 
     converter = RosbagConverter(
         topics={
-            "camera":    args.camera_topic,
-            "imu":       args.imu_topic,
-            "gnss_gt":   args.gnss_gt_topic,
-            "gnss_in":   args.gnss_topic,
-            "odometry":  args.odometry_topic,
+            "camera": args.camera_topic,
+            "imu": args.imu_topic,
+            "gnss_gt": args.gnss_gt_topic,
+            "gnss_in": args.gnss_topic,
+            "odometry": args.odometry_topic,
         },
         force=args.force,
         ppk_pos_path=args.pos,

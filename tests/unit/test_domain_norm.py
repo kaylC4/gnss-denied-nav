@@ -54,7 +54,7 @@ def _bright() -> np.ndarray:
 def _gradient() -> np.ndarray:
     """Immagine con gradiente 0→255 sull'asse x."""
     row = np.linspace(0, 255, W, dtype=np.uint8)
-    channel = np.tile(row, (H, 1))       # (H, W)
+    channel = np.tile(row, (H, 1))  # (H, W)
     return np.stack([channel, channel, channel], axis=-1)  # (H, W, 3)
 
 

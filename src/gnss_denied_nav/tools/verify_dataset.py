@@ -42,8 +42,8 @@ PPK_COLOR = "#34d399"
 TEXT_FG = "#e2e8f0"
 MUTED = "#64748b"
 IMU_PITCH = "#f472b6"
-IMU_ROLL  = "#fbbf24"
-IMU_YAW   = "#60a5fa"
+IMU_ROLL = "#fbbf24"
+IMU_YAW = "#60a5fa"
 WHITE = "#ffffff"
 
 
@@ -339,8 +339,13 @@ class DatasetViewer(tk.Tk):
                 ax.plot(t_rel, window["yaw_deg"], color=IMU_YAW, linewidth=0.9, label="yaw °")
                 ax.axvline(0.0, color=WHITE, linewidth=0.8, linestyle="--", alpha=0.6)
                 ax.axhline(0.0, color=MUTED, linewidth=0.4, linestyle=":", alpha=0.4)
-                ax.legend(fontsize=6, facecolor=PANEL_BG, edgecolor=BORDER,
-                          labelcolor=TEXT_FG, loc="upper right")
+                ax.legend(
+                    fontsize=6,
+                    facecolor=PANEL_BG,
+                    edgecolor=BORDER,
+                    labelcolor=TEXT_FG,
+                    loc="upper right",
+                )
                 ax.set_xlabel("t [s]", color=MUTED, fontsize=7)
                 ax.set_ylabel("gradi", color=MUTED, fontsize=7)
                 self._imu_fig.tight_layout(pad=0.4)
@@ -367,15 +372,16 @@ class DatasetViewer(tk.Tk):
         ax_v = window["ax"].to_numpy(dtype=np.float64)
         ay_v = window["ay"].to_numpy(dtype=np.float64)
         az_v = window["az"].to_numpy(dtype=np.float64)
-        pitch = np.degrees(np.arctan2(-ax_v, np.sqrt(ay_v ** 2 + az_v ** 2)))
-        roll  = np.degrees(np.arctan2(ay_v, az_v))
+        pitch = np.degrees(np.arctan2(-ax_v, np.sqrt(ay_v**2 + az_v**2)))
+        roll = np.degrees(np.arctan2(ay_v, az_v))
 
         ax.plot(t_rel, pitch, color=IMU_PITCH, linewidth=0.9, label="pitch °")
-        ax.plot(t_rel, roll,  color=IMU_ROLL,  linewidth=0.9, label="roll °")
+        ax.plot(t_rel, roll, color=IMU_ROLL, linewidth=0.9, label="roll °")
         ax.axvline(0.0, color=WHITE, linewidth=0.8, linestyle="--", alpha=0.6)
         ax.axhline(0.0, color=MUTED, linewidth=0.4, linestyle=":", alpha=0.4)
-        ax.legend(fontsize=6, facecolor=PANEL_BG, edgecolor=BORDER,
-                  labelcolor=TEXT_FG, loc="upper right")
+        ax.legend(
+            fontsize=6, facecolor=PANEL_BG, edgecolor=BORDER, labelcolor=TEXT_FG, loc="upper right"
+        )
         ax.set_xlabel("t [s]", color=MUTED, fontsize=7)
         ax.set_ylabel("gradi (no yaw — riesegui extract-bag)", color=MUTED, fontsize=6)
         self._imu_fig.tight_layout(pad=0.4)

@@ -176,8 +176,10 @@ class RosbagConverter(Converter):
 
             total_msgs = sum(c.msgcount for c in bag.connections)
             print(f"  Messaggi totali nel bag: {total_msgs:,}")
-            print(f"  Topic attivi: camera={self._topics.get('camera')}  "
-                  f"imu={self._topics.get('imu')}  gnss={self._topics.get('gnss_in')}")
+            print(
+                f"  Topic attivi: camera={self._topics.get('camera')}  "
+                f"imu={self._topics.get('imu')}  gnss={self._topics.get('gnss_in')}"
+            )
             print()
 
             processed = 0

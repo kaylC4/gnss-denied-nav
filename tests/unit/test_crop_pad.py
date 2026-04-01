@@ -50,7 +50,7 @@ def test_returns_crop_pad_result() -> None:
 @pytest.mark.parametrize(
     "h, w",
     [
-        (TARGET, TARGET),       # esatto
+        (TARGET, TARGET),  # esatto
         (TARGET * 2, TARGET * 2),  # troppo grande
         (TARGET // 2, TARGET // 2),  # troppo piccolo
         (TARGET * 2, TARGET // 2),  # grande in H, piccolo in W

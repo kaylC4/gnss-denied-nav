@@ -155,26 +155,20 @@ def test_mask_none_when_not_provided() -> None:
 
 
 def test_mask_rescaled_same_shape_as_image() -> None:
-    result = gsd_match(
-        _blank(), CFG, alt_agl_m=50.0, satellite_gsd_m=0.3, mask=_blank_mask()
-    )
+    result = gsd_match(_blank(), CFG, alt_agl_m=50.0, satellite_gsd_m=0.3, mask=_blank_mask())
     assert result.mask is not None
     assert result.mask.shape == result.image.shape[:2]
 
 
 def test_mask_dtype_bool_after_resize() -> None:
-    result = gsd_match(
-        _blank(), CFG, alt_agl_m=50.0, satellite_gsd_m=0.3, mask=_blank_mask()
-    )
+    result = gsd_match(_blank(), CFG, alt_agl_m=50.0, satellite_gsd_m=0.3, mask=_blank_mask())
     assert result.mask is not None
     assert result.mask.dtype == bool
 
 
 def test_all_true_mask_stays_all_true_after_resize() -> None:
     """Maschera tutta True → dopo rescale è ancora tutta True."""
-    result = gsd_match(
-        _blank(), CFG, alt_agl_m=50.0, satellite_gsd_m=0.3, mask=_blank_mask()
-    )
+    result = gsd_match(_blank(), CFG, alt_agl_m=50.0, satellite_gsd_m=0.3, mask=_blank_mask())
     assert result.mask is not None
     assert result.mask.all()
 
