@@ -16,12 +16,12 @@ dataset:
   source: local
 
   local:
-    path: ${LIGHTHOUSE_DATA_DIR}/lighthouse_benchmarking.bag
+    path: data/lighthouse.bag
 
   format: rosbag
 
   cache:
-    dir: ${LIGHTHOUSE_DATA_DIR}/lighthouse_flat/
+    dir: data/lighthouse_flat/
     force_reconvert: false
 
   rosbag:
@@ -29,7 +29,8 @@ dataset:
       camera:   /camera/image_color/compressed  # sensor_msgs/CompressedImage (JPEG)
       imu:      /imu/data                        # sensor_msgs/Imu
       gnss_gt:  null                             # nessun NavSatFix PPK nel bag
-      gnss_in:  /fix                             # sensor_msgs/NavSatFix
+      gnss_in:   /fix                            # sensor_msgs/NavSatFix
+      odometry:  /Odometry                       # nav_msgs/Odometry — roll/pitch/yaw fusi
 
   # ── Ground truth PPK ────────────────────────────────────────────────────────
   # Questo bag NON contiene un topic NavSatFix PPK.
@@ -40,7 +41,7 @@ dataset:
   #
   ppk:
     source: pos_file       # "rosbag" | "pos_file" | null
-    pos_file: ${LIGHTHOUSE_DATA_DIR}/flight_dataset5.pos
+    pos_file: data/lighthouse.pos
     quality_max: 1         # Q=1 (fix) — soluzioni float escluse
     gps_leapseconds: 18    # GPST − UTC = 18 s (valido per date >= 2017-01-01)
 
@@ -51,12 +52,18 @@ sensors:
     # Risoluzione effettiva — verificare con /camera/camera_info nel bag
     width: 1280
     height: 720
+    # Tipo e orientamento — usati dalla pipeline di pre-processing drone-to-satellite
+    camera_type: pinhole        # "pinhole" | "fisheye"
+    camera_orientation: downward  # "downward" | "forward"
+    # Dimensione fisica del pixel del sensore — necessaria per calcolo GSD (Stage 4)
+    pixel_pitch: 1.5            # µm — PLACEHOLDER: verificare datasheet sensore
     # Intrinseci — compilare leggendo il topic /camera/camera_info
     fx: 689.14   # PLACEHOLDER
     fy: 689.14   # PLACEHOLDER
     cx: 640.0    # PLACEHOLDER
     cy: 360.0    # PLACEHOLDER
-    distortion: [0.0, 0.0, 0.0, 0.0]   # k1, k2, p1, p2 — PLACEHOLDER
+    # Coefficienti di distorsione: [k1, k2, p1, p2] per pinhole, [k1, k2, k3, k4] per fisheye
+    dist_coeffs: [0.0, 0.0, 0.0, 0.0]   # PLACEHOLDER
     model: pinhole_radtan
 
   imu:
@@ -73,7 +80,19 @@ sensors:
 
   altitude_agl:
     source: gnss_minus_dem
-    dem_path: ${SRTM_DATA_DIR}/lighthouse_area.tif   # PLACEHOLDER — area da definire
+    dem_path: data/dem/lighthouse_area.tif   # PLACEHOLDER — area da definire
+
+  # ── Dati di volo per-frame ───────────────────────────────────────────────────
+  # heading e imu_rotation sono estratti a runtime dai topic IMU/odometry.
+  # I valori qui sotto sono i fallback statici usati in assenza di dati live.
+  flight:
+    heading: 0.0      # gradi (0=nord, CW) — usato dallo Stage 3 (north-align)
+    # imu_rotation è la matrice 3×3 camera-to-world, aggiornata per ogni frame.
+    # PLACEHOLDER: sostituire con la rotazione media della sequenza se nota.
+    imu_rotation:
+      - [1.0, 0.0, 0.0]
+      - [0.0, 1.0, 0.0]
+      - [0.0, 0.0, 1.0]
 
 # Trasformazioni estrinseci (da calibration del rig Lighthouse)
 extrinsics:
@@ -89,7 +108,7 @@ pipeline:
   tile_provider:
     backend: offline_mbtiles
     params:
-      mbtiles_path: ${LIGHTHOUSE_DATA_DIR}/tiles/lighthouse_area.mbtiles
+      mbtiles_path: data/tiles/lighthouse_area.mbtiles
 
   patch_sampler:
     backend: uniform_stride
@@ -100,11 +119,26 @@ pipeline:
 
   view_transformer: homography_inverse
 
+  # ── Pre-processing drone-to-satellite ────────────────────────────────────────
+  preprocessing:
+    # Stage 4 — GSD match
+    satellite_gsd: 0.3          # m/px — target GSD (WorldView-3/4, Maxar, Pléiades Neo)
+    # Stage 1 — Undistort
+    undistort_balance: 0.0      # 0.0 = nessun bordo nero (consigliato per matching)
+    # Stage 5 — Crop/Pad
+    tile_size: 512              # px — input encoder (512 per DINOv2, 224 per CLIP/GeoCLIP)
+    # Stage 6 — Domain normalization
+    domain_normalization:
+      method: none              # "none" | "hist" | "clahe"
+      reference_tile: null      # path a PNG satellite di riferimento (solo method: hist)
+      clip_limit: 2.0           # intensità CLAHE (solo method: clahe)
+      tile_grid_size: [8, 8]    # griglia CLAHE in pixel (solo method: clahe)
+
   feature_encoder:
     backend: onnx
     params:
-      checkpoint: ${ENCODER_WEIGHTS_DIR}/dinov2_vits14.onnx
-      input_size: 224
+      checkpoint: data/weights/dinov2_vitl14.onnx  # vitl14: 1024-dim, consigliato dalla spec
+      input_size: 518                               # DINOv2 ViT-L/14 usa 518×518
 
   retrieval_engine:
     backend: faiss_flat
