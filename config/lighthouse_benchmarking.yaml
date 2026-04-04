@@ -23,6 +23,7 @@ dataset:
   cache:
     dir: data/lighthouse_flat/
     force_reconvert: false
+    max_frames: null            # null = tutti i frame; intero = limite per test rapidi
 
   rosbag:
     topics:

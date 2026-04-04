@@ -82,6 +82,13 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Riconverti anche se la cartella di output esiste già.",
     )
+    p.add_argument(
+        "--max-frames",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Interrompi dopo N frame camera estratti (utile per test rapidi).",
+    )
     return p
 
 
@@ -102,6 +109,7 @@ def main(argv: list[str] | None = None) -> None:
         ppk_pos_path=args.pos,
         ppk_quality_max=args.ppk_quality_max,
         ppk_gps_leapseconds=args.ppk_leapseconds,
+        max_frames=args.max_frames,
     )
 
     import time

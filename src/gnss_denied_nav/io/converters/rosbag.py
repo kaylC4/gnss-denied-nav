@@ -107,6 +107,9 @@ class RosbagConverter(Converter):
         1 = solo fix (default), 2 = fix + float.
     ppk_gps_leapseconds : int
         Offset GPS Time − UTC [s]. 18 s dopo il 2017-01-01 (default).
+    max_frames : int | None
+        Se impostato, interrompe l'estrazione dopo aver salvato N frame camera.
+        Utile per test rapidi. None = nessun limite.
     """
 
     name = "rosbag"
@@ -118,12 +121,14 @@ class RosbagConverter(Converter):
         ppk_pos_path: str | None = None,
         ppk_quality_max: int = 1,
         ppk_gps_leapseconds: int = 18,
+        max_frames: int | None = None,
     ) -> None:
         self._topics = topics
         self._force = force
         self._ppk_pos_path = ppk_pos_path
         self._ppk_quality_max = ppk_quality_max
         self._ppk_gps_leapseconds = ppk_gps_leapseconds
+        self._max_frames = max_frames
 
     def convert(self, source_path: str, output_dir: str) -> None:
         """
@@ -284,6 +289,9 @@ class RosbagConverter(Converter):
                             "filename": filename,
                         }
                     )
+
+                    if self._max_frames is not None and len(frame_rows) >= self._max_frames:
+                        break
 
                 processed += 1
                 if processed % _PRINT_EVERY == 0 or processed == total_msgs:
