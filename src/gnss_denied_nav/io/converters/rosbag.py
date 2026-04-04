@@ -77,6 +77,7 @@ Uso — caso 3 (nessun PPK)
 from __future__ import annotations
 
 import math
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -185,6 +186,7 @@ class RosbagConverter(Converter):
             processed = 0
             _BAR_WIDTH = 30
             _PRINT_EVERY = max(1, total_msgs // 200)  # aggiorna ogni ~0.5%
+            _IS_TTY = sys.stdout.isatty()
 
             for connection, _bag_ts, rawdata in bag.messages():
                 topic = connection.topic
@@ -295,11 +297,21 @@ class RosbagConverter(Converter):
                         f"Odom: {len(odom_rows):4,}  "
                         f"Frame: {len(frame_rows):4,}"
                     )
-                    sys.stdout.write(f"\r\033[K{line}")
+                    if _IS_TTY:
+                        # Tronca alla larghezza del terminale e padda con spazi
+                        # per cancellare i residui della riga precedente —
+                        # senza ANSI escape codes (non universali).
+                        term_w = shutil.get_terminal_size(fallback=(80, 24)).columns
+                        line_out = line[:term_w].ljust(term_w)
+                        sys.stdout.write(f"\r{line_out}")
+                    else:
+                        # Output rediretto (pipe / file): stampa normalmente
+                        sys.stdout.write(f"{line}\n")
                     sys.stdout.flush()
 
-            sys.stdout.write("\n")
-            sys.stdout.flush()
+            if _IS_TTY:
+                sys.stdout.write("\n")
+                sys.stdout.flush()
 
         # ── PPK da file .pos esterno (caso 2) ─────────────────────────────────
         # Si usa solo se gnss_gt non era un topic nel bag.
