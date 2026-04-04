@@ -134,6 +134,16 @@ pipeline:
       clip_limit: 2.0           # intensità CLAHE (solo method: clahe)
       tile_grid_size: [8, 8]    # griglia CLAHE in pixel (solo method: clahe)
 
+  # ── Inspection — salvataggio output intermedi per verifica manuale ──────────
+  inspection:
+    enabled: false                # true per attivare il salvataggio
+    output_dir: debug/stages      # directory di destinazione
+    seed: 42                      # seed random per riproducibilità
+    sampling:
+      mode: percent               # "percent" (X% del dataset) | "count" (N immagini fisse)
+      value: 10                   # 10% oppure 100 immagini, a seconda del mode
+    stages: [1, 2, 3, 4, 5, 6]   # quali stage salvare (1-6)
+
   feature_encoder:
     backend: onnx
     params:

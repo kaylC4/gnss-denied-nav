@@ -63,6 +63,7 @@ extract-bag      = "gnss_denied_nav.tools.extract_bag:main"
 run-pipeline     = "gnss_denied_nav.pipeline:main"
 benchmark        = "gnss_denied_nav.tools.benchmark:main"
 verify-dataset   = "gnss_denied_nav.tools.verify_dataset:main"
+inspect-pipeline = "gnss_denied_nav.tools.inspect_pipeline:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/gnss_denied_nav"]
@@ -82,7 +83,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # matplotlib/tkinter non hanno stubs completi — disabilitiamo solo untyped-call
-module = "gnss_denied_nav.tools.verify_dataset"
+module = [
+    "gnss_denied_nav.tools.verify_dataset",
+    "gnss_denied_nav.tools.inspect_pipeline",
+]
 disallow_untyped_calls = false
 
 [tool.pytest.ini_options]

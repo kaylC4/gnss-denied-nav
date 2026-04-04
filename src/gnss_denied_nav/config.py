@@ -24,10 +24,12 @@ import yaml  # type: ignore[import-untyped]
 CameraType = Literal["pinhole", "fisheye"]
 CameraOrientation = Literal["downward", "forward"]
 NormMethod = Literal["none", "hist", "clahe"]
+SamplingMode = Literal["percent", "count"]
 
 _VALID_CAMERA_TYPES: frozenset[str] = frozenset({"pinhole", "fisheye"})
 _VALID_ORIENTATIONS: frozenset[str] = frozenset({"downward", "forward"})
 _VALID_NORM_METHODS: frozenset[str] = frozenset({"none", "hist", "clahe"})
+_VALID_SAMPLING_MODES: frozenset[str] = frozenset({"percent", "count"})
 
 
 # ── DomainNormConfig ──────────────────────────────────────────────────────────
@@ -76,6 +78,86 @@ class DomainNormConfig:
             reference_tile=reference_tile,
             clip_limit=clip_limit,
             tile_grid_size=tile_grid_size,
+        )
+
+
+# ── InspectionConfig ─────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class InspectionConfig:
+    """
+    Configurazione per il salvataggio e l'ispezione degli output intermedi
+    della pipeline di preprocessing (Stage 1-6).
+
+    enabled        : attiva/disattiva il salvataggio
+    output_dir     : directory di destinazione
+    sampling_mode  : "percent" (percentuale del dataset) o "count" (numero fisso)
+    sampling_value : valore associato al mode (es. 10 per 10% o 100 immagini)
+    seed           : seed random per riproducibilità del campionamento
+    stages         : lista degli stage da salvare (1-6)
+    """
+
+    enabled: bool
+    output_dir: Path
+    sampling_mode: SamplingMode
+    sampling_value: int
+    seed: int
+    stages: list[int]
+
+    @classmethod
+    def _from_dict(cls, d: dict[str, Any]) -> InspectionConfig:
+        enabled = bool(d.get("enabled", False))
+
+        output_dir = Path(d.get("output_dir", "debug/stages"))
+
+        sampling = d.get("sampling", {})
+        mode_raw = str(sampling.get("mode", "percent"))
+        if mode_raw not in _VALID_SAMPLING_MODES:
+            raise ValueError(
+                f"inspection.sampling.mode non valido: {mode_raw!r}. "
+                f"Atteso: {sorted(_VALID_SAMPLING_MODES)}"
+            )
+        sampling_mode = cast(SamplingMode, mode_raw)
+
+        sampling_value = int(sampling.get("value", 10))
+        if sampling_value <= 0:
+            raise ValueError(
+                f"inspection.sampling.value deve essere > 0, ricevuto: {sampling_value}"
+            )
+        if sampling_mode == "percent" and sampling_value > 100:
+            raise ValueError(
+                f"inspection.sampling.value in modalità percent deve essere <= 100, "
+                f"ricevuto: {sampling_value}"
+            )
+
+        seed = int(d.get("seed", 42))
+
+        stages_raw = d.get("stages", [1, 2, 3, 4, 5, 6])
+        stages = [int(s) for s in stages_raw]
+        invalid = [s for s in stages if s < 1 or s > 6]
+        if invalid:
+            raise ValueError(f"inspection.stages contiene valori non validi: {invalid}")
+
+        return cls(
+            enabled=enabled,
+            output_dir=output_dir,
+            sampling_mode=sampling_mode,
+            sampling_value=sampling_value,
+            seed=seed,
+            stages=stages,
+        )
+
+    @classmethod
+    def disabled(cls) -> InspectionConfig:
+        """Restituisce una configurazione di default con inspection disabilitata."""
+        return cls(
+            enabled=False,
+            output_dir=Path("debug/stages"),
+            sampling_mode="percent",
+            sampling_value=10,
+            seed=42,
+            stages=[1, 2, 3, 4, 5, 6],
         )
 
 
@@ -249,6 +331,7 @@ class PipelineConfig:
     camera: CameraConfig
     flight: FlightConfig
     preprocessing: PreprocessingConfig
+    inspection: InspectionConfig
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> PipelineConfig:
@@ -259,8 +342,16 @@ class PipelineConfig:
         sensors: dict[str, Any] = raw.get("sensors", {})
         pipeline: dict[str, Any] = raw.get("pipeline", {})
 
+        inspection_raw = pipeline.get("inspection", {})
+        inspection = (
+            InspectionConfig._from_dict(inspection_raw)
+            if inspection_raw
+            else InspectionConfig.disabled()
+        )
+
         return cls(
             camera=CameraConfig._from_dict(sensors.get("camera", {})),
             flight=FlightConfig._from_dict(sensors.get("flight", {})),
             preprocessing=PreprocessingConfig._from_dict(pipeline.get("preprocessing", {})),
+            inspection=inspection,
         )
