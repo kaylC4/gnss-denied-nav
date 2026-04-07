@@ -89,6 +89,11 @@ module = [
 ]
 disallow_untyped_calls = false
 
+[[tool.mypy.overrides]]
+# tkinter lambda callbacks: mypy non riesce a inferire il tipo dell'evento
+module = "gnss_denied_nav.tools.inspect_pipeline"
+disable_error_code = ["misc"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts   = "--cov=gnss_denied_nav --cov-report=term-missing -v"
