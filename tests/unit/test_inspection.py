@@ -18,12 +18,10 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from gnss_denied_nav.config import InspectionConfig
 from gnss_denied_nav.inspection.sampler import select_indices
 from gnss_denied_nav.inspection.stage_dumper import StageDumper
-
 
 # ── fixtures ─────────────────────────────────────────────────────────────────
 
@@ -137,7 +135,9 @@ class TestStageDumper:
 
     def test_numpy_arrays_serialized_in_json(self, tmp_path: Path) -> None:
         dumper = StageDumper(_cfg(output_dir=str(tmp_path / "out")))
-        dumper.dump_stage(100, 1, _img(), {"K": np.array([[1.0, 0, 320], [0, 1.0, 240], [0, 0, 1]])})
+        dumper.dump_stage(
+            100, 1, _img(), {"K": np.array([[1.0, 0, 320], [0, 1.0, 240], [0, 0, 1]])}
+        )
         data = json.loads((tmp_path / "out" / "frame_100" / "s1_params.json").read_text())
         assert isinstance(data["K"], list)
         assert data["K"][0][0] == 1.0

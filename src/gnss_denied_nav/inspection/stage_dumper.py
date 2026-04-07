@@ -118,7 +118,7 @@ class StageDumper:
         return index_path
 
 
-def _make_serializable(obj: Any) -> Any:
+def _make_serializable(obj: object) -> object:
     """Converte ndarray e tipi numpy in tipi JSON-serializzabili."""
     if isinstance(obj, np.ndarray):
         return obj.tolist()
