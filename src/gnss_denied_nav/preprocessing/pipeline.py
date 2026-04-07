@@ -96,48 +96,73 @@ class PreprocessingPipeline:
         # ── Stage 1: Undistort ──────────────────────────────────────────────
         r1 = undistort(img, cam, balance=pre.undistort_balance)
         if inspect:
-            self._dump(timestamp_ns, 1, r1.image, {
-                "K_new": r1.K_new,
-                "balance": pre.undistort_balance,
-                "camera_type": cam.camera_type,
-                "size_in": list(img.shape[:2]),
-                "size_out": list(r1.image.shape[:2]),
-            })
+            self._dump(
+                timestamp_ns,
+                1,
+                r1.image,
+                {
+                    "K_new": r1.K_new,
+                    "balance": pre.undistort_balance,
+                    "camera_type": cam.camera_type,
+                    "size_in": list(img.shape[:2]),
+                    "size_out": list(r1.image.shape[:2]),
+                },
+            )
 
         # ── Stage 2: Warp to Nadir ──────────────────────────────────────────
         r2 = warp_to_nadir(r1.image, r1.K_new, cfg.flight.imu_rotation, cam)
         skipped_nadir = cam.camera_orientation == "downward"
         if inspect:
-            self._dump(timestamp_ns, 2, r2.image, {
-                "H": r2.H,
-                "skipped": skipped_nadir,
-                "camera_orientation": cam.camera_orientation,
-                "size_out": list(r2.image.shape[:2]),
-            })
+            self._dump(
+                timestamp_ns,
+                2,
+                r2.image,
+                {
+                    "H": r2.H,
+                    "skipped": skipped_nadir,
+                    "camera_orientation": cam.camera_orientation,
+                    "size_out": list(r2.image.shape[:2]),
+                },
+            )
 
         # ── Stage 3: North Align ────────────────────────────────────────────
         r3 = north_align(r2.image, cfg.flight.heading_deg)
         valid_ratio = float(r3.mask.sum()) / r3.mask.size if r3.mask.size > 0 else 0.0
         if inspect:
-            self._dump(timestamp_ns, 3, r3.image, {
-                "M": r3.M,
-                "heading_deg": cfg.flight.heading_deg,
-                "size_out": list(r3.image.shape[:2]),
-                "valid_pixel_ratio": round(valid_ratio, 4),
-            }, mask=r3.mask)
+            self._dump(
+                timestamp_ns,
+                3,
+                r3.image,
+                {
+                    "M": r3.M,
+                    "heading_deg": cfg.flight.heading_deg,
+                    "size_out": list(r3.image.shape[:2]),
+                    "valid_pixel_ratio": round(valid_ratio, 4),
+                },
+                mask=r3.mask,
+            )
 
         # ── Stage 4: GSD Match ──────────────────────────────────────────────
         r4 = gsd_match(
-            r3.image, cam, alt_agl_m, pre.satellite_gsd_m, mask=r3.mask,
+            r3.image,
+            cam,
+            alt_agl_m,
+            pre.satellite_gsd_m,
+            mask=r3.mask,
         )
         if inspect:
-            self._dump(timestamp_ns, 4, r4.image, {
-                "scale": r4.scale,
-                "gsd_drone_m": r4.gsd_drone_m,
-                "gsd_satellite_m": pre.satellite_gsd_m,
-                "direction": "downsample" if r4.scale < 1.0 else "upsample",
-                "size_out": list(r4.image.shape[:2]),
-            })
+            self._dump(
+                timestamp_ns,
+                4,
+                r4.image,
+                {
+                    "scale": r4.scale,
+                    "gsd_drone_m": r4.gsd_drone_m,
+                    "gsd_satellite_m": pre.satellite_gsd_m,
+                    "direction": "downsample" if r4.scale < 1.0 else "upsample",
+                    "size_out": list(r4.image.shape[:2]),
+                },
+            )
 
         # ── Stage 5: Crop/Pad ──────────────────────────────────────────────
         r5 = crop_pad(r4.image, target_size=pre.tile_size_px, mask=r4.mask)
@@ -145,22 +170,32 @@ class PreprocessingPipeline:
         if r5.mask is not None and r5.mask.size > 0:
             coverage = float(r5.mask.sum()) / r5.mask.size
         if inspect:
-            self._dump(timestamp_ns, 5, r5.image, {
-                "target_size": pre.tile_size_px,
-                "size_in": list(r4.image.shape[:2]),
-                "size_out": list(r5.image.shape[:2]),
-                "coverage_ratio": round(coverage, 4),
-            })
+            self._dump(
+                timestamp_ns,
+                5,
+                r5.image,
+                {
+                    "target_size": pre.tile_size_px,
+                    "size_in": list(r4.image.shape[:2]),
+                    "size_out": list(r5.image.shape[:2]),
+                    "coverage_ratio": round(coverage, 4),
+                },
+            )
 
         # ── Stage 6: Domain Normalization ───────────────────────────────────
         r6 = domain_normalize(r5.image, pre.domain_norm)
         if inspect:
-            self._dump(timestamp_ns, 6, r6, {
-                "method": pre.domain_norm.method,
-                "clip_limit": pre.domain_norm.clip_limit,
-                "tile_grid_size": list(pre.domain_norm.tile_grid_size),
-                "size_out": list(r6.shape[:2]),
-            })
+            self._dump(
+                timestamp_ns,
+                6,
+                r6,
+                {
+                    "method": pre.domain_norm.method,
+                    "clip_limit": pre.domain_norm.clip_limit,
+                    "tile_grid_size": list(pre.domain_norm.tile_grid_size),
+                    "size_out": list(r6.shape[:2]),
+                },
+            )
 
         return PipelineResult(image=r6, mask=r5.mask)
 

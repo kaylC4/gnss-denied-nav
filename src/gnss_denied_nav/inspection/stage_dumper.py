@@ -103,11 +103,13 @@ class StageDumper:
 
     def register_frame(self, timestamp_ns: int, filename: str) -> None:
         """Registra un frame nell'indice per il parquet finale."""
-        self._index_rows.append({
-            "timestamp_ns": timestamp_ns,
-            "filename": filename,
-            "frame_dir": str(self.frame_dir(timestamp_ns)),
-        })
+        self._index_rows.append(
+            {
+                "timestamp_ns": timestamp_ns,
+                "filename": filename,
+                "frame_dir": str(self.frame_dir(timestamp_ns)),
+            }
+        )
 
     def write_index(self) -> Path:
         """Scrive index.parquet con la lista dei frame ispezionati."""

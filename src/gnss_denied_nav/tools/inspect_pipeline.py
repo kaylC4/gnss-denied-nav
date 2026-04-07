@@ -173,7 +173,11 @@ class PipelineInspector(tk.Tk):
             header.bind("<Button-1>", lambda e, s=stage: self._select_stage(s))
 
             img_label = tk.Label(
-                panel, bg=PANEL_BG, text="—", fg=MUTED, font=("Helvetica", 16),
+                panel,
+                bg=PANEL_BG,
+                text="—",
+                fg=MUTED,
+                font=("Helvetica", 16),
             )
             img_label.pack(fill="both", expand=True, padx=4, pady=4)
             img_label.bind("<Button-1>", lambda e, s=stage: self._select_stage(s))
@@ -190,7 +194,10 @@ class PipelineInspector(tk.Tk):
     def _build_params_panel(self) -> None:
         """Pannello inferiore per i parametri JSON dello stage selezionato."""
         params_frame = tk.Frame(
-            self, bg=PANEL_BG, highlightbackground=BORDER, highlightthickness=1,
+            self,
+            bg=PANEL_BG,
+            highlightbackground=BORDER,
+            highlightthickness=1,
         )
         params_frame.pack(fill="x", padx=14, pady=(4, 2))
 
@@ -341,9 +348,7 @@ class PipelineInspector(tk.Tk):
 
     def _update_params(self, idx: int) -> None:
         stage = self._selected_stage
-        self._params_header_var.set(
-            f"PARAMETRI — {_STAGE_LABELS.get(stage, f'Stage {stage}')}"
-        )
+        self._params_header_var.set(f"PARAMETRI — {_STAGE_LABELS.get(stage, f'Stage {stage}')}")
 
         # Evidenzia pannello selezionato
         for s, panel in self._stage_panels.items():

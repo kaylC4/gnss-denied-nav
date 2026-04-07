@@ -44,7 +44,10 @@ def _pipeline_config(
         undistort_balance=0.0,
         tile_size_px=64,
         domain_norm=DomainNormConfig(
-            method="none", reference_tile=None, clip_limit=2.0, tile_grid_size=(8, 8),
+            method="none",
+            reference_tile=None,
+            clip_limit=2.0,
+            tile_grid_size=(8, 8),
         ),
     )
     inspection = InspectionConfig(
@@ -107,8 +110,11 @@ class TestPipelineInspection:
         # Con count=5 e n_frames=3, tutti e 3 i frame vengono campionati
         for i in range(3):
             pipe.run(
-                _dummy_img(), timestamp_ns=1000 + i, filename=f"f_{i}.png",
-                alt_agl_m=50.0, frame_index=i,
+                _dummy_img(),
+                timestamp_ns=1000 + i,
+                filename=f"f_{i}.png",
+                alt_agl_m=50.0,
+                frame_index=i,
             )
         pipe.finalize_inspection()
         # Verifica che index.parquet esista
@@ -130,8 +136,11 @@ class TestPipelineInspection:
         # Frame index=99: potrebbe non essere campionato con count=5
         # Eseguiamo frame_index=-1 (flag per non ispezionare)
         pipe.run(
-            _dummy_img(), timestamp_ns=999, filename="skip.png",
-            alt_agl_m=50.0, frame_index=-1,
+            _dummy_img(),
+            timestamp_ns=999,
+            filename="skip.png",
+            alt_agl_m=50.0,
+            frame_index=-1,
         )
         assert not (tmp_path / "frame_999").exists()
 
@@ -140,7 +149,10 @@ class TestPipelineInspection:
         pipe = PreprocessingPipeline(cfg)
         pipe.prepare_inspection(n_frames=10)
         pipe.run(
-            _dummy_img(), timestamp_ns=100, filename="f.png",
-            alt_agl_m=50.0, frame_index=0,
+            _dummy_img(),
+            timestamp_ns=100,
+            filename="f.png",
+            alt_agl_m=50.0,
+            frame_index=0,
         )
         assert not list(tmp_path.glob("frame_*"))

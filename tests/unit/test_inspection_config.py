@@ -22,10 +22,12 @@ class TestInspectionConfig:
         assert cfg.stages == [1, 2, 3, 4, 5, 6]
 
     def test_from_dict_count_mode(self) -> None:
-        cfg = InspectionConfig._from_dict({
-            "enabled": True,
-            "sampling": {"mode": "count", "value": 100},
-        })
+        cfg = InspectionConfig._from_dict(
+            {
+                "enabled": True,
+                "sampling": {"mode": "count", "value": 100},
+            }
+        )
         assert cfg.sampling_mode == "count"
         assert cfg.sampling_value == 100
 
@@ -39,24 +41,30 @@ class TestInspectionConfig:
 
     def test_invalid_sampling_mode_raises(self) -> None:
         with pytest.raises(ValueError, match="sampling.mode"):
-            InspectionConfig._from_dict({
-                "enabled": True,
-                "sampling": {"mode": "invalid"},
-            })
+            InspectionConfig._from_dict(
+                {
+                    "enabled": True,
+                    "sampling": {"mode": "invalid"},
+                }
+            )
 
     def test_negative_value_raises(self) -> None:
         with pytest.raises(ValueError, match="sampling.value"):
-            InspectionConfig._from_dict({
-                "enabled": True,
-                "sampling": {"mode": "count", "value": -1},
-            })
+            InspectionConfig._from_dict(
+                {
+                    "enabled": True,
+                    "sampling": {"mode": "count", "value": -1},
+                }
+            )
 
     def test_percent_over_100_raises(self) -> None:
         with pytest.raises(ValueError, match="sampling.value"):
-            InspectionConfig._from_dict({
-                "enabled": True,
-                "sampling": {"mode": "percent", "value": 150},
-            })
+            InspectionConfig._from_dict(
+                {
+                    "enabled": True,
+                    "sampling": {"mode": "percent", "value": 150},
+                }
+            )
 
     def test_invalid_stage_number_raises(self) -> None:
         with pytest.raises(ValueError, match="stages"):
