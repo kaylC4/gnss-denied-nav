@@ -130,6 +130,26 @@ class RosbagConverter(Converter):
         self._ppk_gps_leapseconds = ppk_gps_leapseconds
         self._max_frames = max_frames
 
+    @staticmethod
+    def _resolve_max_frames(
+        max_frames: int | None, n_camera_frames: int
+    ) -> tuple[int, bool]:
+        """
+        Risolve il numero effettivo di frame da estrarre.
+
+        Returns
+        -------
+        (effective_max_frames, warn)
+            effective_max_frames : frame da estrarre
+            warn                 : True se max_frames >= n_camera_frames
+                                   (il valore sarà ignorato e si estrarrà tutto)
+        """
+        if max_frames is None:
+            return n_camera_frames, False
+        if max_frames >= n_camera_frames:
+            return n_camera_frames, True
+        return max_frames, False
+
     def convert(self, source_path: str, output_dir: str) -> None:
         """
         Legge il bag (e opzionalmente il file .pos) e scrive il formato flat.
@@ -189,16 +209,14 @@ class RosbagConverter(Converter):
             )
 
             # Risolvi effective_max_frames e avvisa se max_frames è fuori range
-            if self._max_frames is not None and self._max_frames >= n_camera_frames:
+            effective_max_frames, warn = self._resolve_max_frames(
+                self._max_frames, n_camera_frames
+            )
+            if warn:
                 print(
                     f"  ⚠ max_frames ({self._max_frames:,}) >= frame camera nel bag "
                     f"({n_camera_frames:,}) — verrà estratto l'intero bag"
                 )
-                effective_max_frames = n_camera_frames
-            elif self._max_frames is not None:
-                effective_max_frames = self._max_frames
-            else:
-                effective_max_frames = n_camera_frames
 
             print(f"  Messaggi totali nel bag: {total_msgs:,}")
             print(
@@ -213,6 +231,23 @@ class RosbagConverter(Converter):
             _BAR_WIDTH = 30
             _PRINT_EVERY = max(1, total_msgs // 200)  # aggiorna ogni ~0.5%
             _IS_TTY = sys.stdout.isatty()
+
+            def _render_bar(pct: float) -> None:
+                filled = int(_BAR_WIDTH * pct)
+                bar = "█" * filled + "░" * (_BAR_WIDTH - filled)
+                line = (
+                    f"  [{bar}] {pct:5.1%}  "
+                    f"IMU: {len(imu_rows):5,}  "
+                    f"GNSS: {len(gnss_rows):4,}  "
+                    f"Odom: {len(odom_rows):4,}  "
+                    f"Frame: {len(frame_rows):4,}"
+                )
+                if _IS_TTY:
+                    term_w = shutil.get_terminal_size(fallback=(80, 24)).columns
+                    sys.stdout.write(f"\r{line[:term_w].ljust(term_w)}")
+                else:
+                    sys.stdout.write(f"{line}\n")
+                sys.stdout.flush()
 
             for connection, _bag_ts, rawdata in bag.messages():
                 topic = connection.topic
@@ -315,35 +350,17 @@ class RosbagConverter(Converter):
                         break
 
                 processed += 1
-                if processed % _PRINT_EVERY == 0 or processed == total_msgs:
-                    # Se max_frames è attivo, la percentuale si basa sui frame
-                    # estratti rispetto al limite — non sui messaggi totali del bag.
+                if processed % _PRINT_EVERY == 0:
                     if self._max_frames is not None:
-                        denom = effective_max_frames or 1
-                        pct = len(frame_rows) / denom
+                        pct = len(frame_rows) / (effective_max_frames or 1)
                     else:
                         pct = processed / total_msgs if total_msgs else 1.0
-                    filled = int(_BAR_WIDTH * pct)
-                    bar = "█" * filled + "░" * (_BAR_WIDTH - filled)
-                    line = (
-                        f"  [{bar}] {pct:5.1%}  "
-                        f"IMU: {len(imu_rows):5,}  "
-                        f"GNSS: {len(gnss_rows):4,}  "
-                        f"Odom: {len(odom_rows):4,}  "
-                        f"Frame: {len(frame_rows):4,}"
-                    )
-                    if _IS_TTY:
-                        # Tronca alla larghezza del terminale e padda con spazi
-                        # per cancellare i residui della riga precedente —
-                        # senza ANSI escape codes (non universali).
-                        term_w = shutil.get_terminal_size(fallback=(80, 24)).columns
-                        line_out = line[:term_w].ljust(term_w)
-                        sys.stdout.write(f"\r{line_out}")
-                    else:
-                        # Output rediretto (pipe / file): stampa normalmente
-                        sys.stdout.write(f"{line}\n")
-                    sys.stdout.flush()
+                    _render_bar(pct)
 
+            # Aggiornamento finale forzato al 100%: garantisce che la barra
+            # mostri sempre 100% a fine estrazione, anche quando il loop
+            # si interrompe con break (max_frames raggiunto).
+            _render_bar(1.0)
             if _IS_TTY:
                 sys.stdout.write("\n")
                 sys.stdout.flush()
