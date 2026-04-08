@@ -59,11 +59,12 @@ viz = [
 ]
 
 [project.scripts]
-extract-bag      = "gnss_denied_nav.tools.extract_bag:main"
-run-pipeline     = "gnss_denied_nav.pipeline:main"
-benchmark        = "gnss_denied_nav.tools.benchmark:main"
-verify-dataset   = "gnss_denied_nav.tools.verify_dataset:main"
-inspect-pipeline = "gnss_denied_nav.tools.inspect_pipeline:main"
+extract-bag         = "gnss_denied_nav.tools.extract_bag:main"
+preprocess-pipeline = "gnss_denied_nav.cli.preprocess:main"
+run-pipeline        = "gnss_denied_nav.pipeline:main"
+benchmark           = "gnss_denied_nav.tools.benchmark:main"
+verify-dataset      = "gnss_denied_nav.tools.verify_dataset:main"
+inspect-pipeline    = "gnss_denied_nav.tools.inspect_pipeline:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/gnss_denied_nav"]

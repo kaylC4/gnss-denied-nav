@@ -137,7 +137,7 @@ pipeline:
 
   # ── Inspection — salvataggio output intermedi per verifica manuale ──────────
   inspection:
-    enabled: false                # true per attivare il salvataggio
+    enabled: true                 # true per attivare il salvataggio
     output_dir: debug/stages      # directory di destinazione
     seed: 42                      # seed random per riproducibilità
     sampling:
