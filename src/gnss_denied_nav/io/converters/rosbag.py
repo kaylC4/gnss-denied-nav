@@ -181,11 +181,32 @@ class RosbagConverter(Converter):
             bag: Any = _bag  # rosbags stubs variano tra versioni
 
             total_msgs = sum(c.msgcount for c in bag.connections)
+
+            # Numero di frame camera presenti nel bag
+            camera_topic = self._topics.get("camera")
+            n_camera_frames = sum(
+                c.msgcount for c in bag.connections if c.topic == camera_topic
+            )
+
+            # Risolvi effective_max_frames e avvisa se max_frames è fuori range
+            if self._max_frames is not None and self._max_frames >= n_camera_frames:
+                print(
+                    f"  ⚠ max_frames ({self._max_frames:,}) >= frame camera nel bag "
+                    f"({n_camera_frames:,}) — verrà estratto l'intero bag"
+                )
+                effective_max_frames = n_camera_frames
+            elif self._max_frames is not None:
+                effective_max_frames = self._max_frames
+            else:
+                effective_max_frames = n_camera_frames
+
             print(f"  Messaggi totali nel bag: {total_msgs:,}")
             print(
-                f"  Topic attivi: camera={self._topics.get('camera')}  "
+                f"  Topic attivi: camera={camera_topic}  "
                 f"imu={self._topics.get('imu')}  gnss={self._topics.get('gnss_in')}"
             )
+            if self._max_frames is not None and effective_max_frames == self._max_frames:
+                print(f"  Estrazione limitata a {effective_max_frames:,} frame")
             print()
 
             processed = 0
@@ -295,7 +316,13 @@ class RosbagConverter(Converter):
 
                 processed += 1
                 if processed % _PRINT_EVERY == 0 or processed == total_msgs:
-                    pct = processed / total_msgs if total_msgs else 1.0
+                    # Se max_frames è attivo, la percentuale si basa sui frame
+                    # estratti rispetto al limite — non sui messaggi totali del bag.
+                    if self._max_frames is not None:
+                        denom = effective_max_frames or 1
+                        pct = len(frame_rows) / denom
+                    else:
+                        pct = processed / total_msgs if total_msgs else 1.0
                     filled = int(_BAR_WIDTH * pct)
                     bar = "█" * filled + "░" * (_BAR_WIDTH - filled)
                     line = (
