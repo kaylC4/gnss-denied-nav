@@ -16,9 +16,13 @@ insieme a frames_preprocessed.parquet con schema [timestamp_ns, filename].
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 import time
 from pathlib import Path
+
+_BAR_WIDTH = 30
+_IS_TTY = sys.stdout.isatty()
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -98,20 +102,25 @@ def _print_progress(
     processed: int,
     skipped: int,
 ) -> None:
-    """Stampa una riga di progresso aggiornata in-place (nessun \\r manuale in-stringa)."""
+    """Stampa una riga di progresso aggiornata in-place, stile rosbag converter."""
     elapsed = time.monotonic() - t0
-    pct = current / total * 100.0 if total > 0 else 0.0
+    pct = current / total if total > 0 else 0.0
     fps = processed / elapsed if elapsed > 0 else 0.0
     eta = (total - current) / fps if fps > 0 else 0.0
-    bar_len = 30
-    filled = int(bar_len * current / total) if total > 0 else 0
-    bar = "#" * filled + "-" * (bar_len - filled)
+    filled = int(_BAR_WIDTH * pct)
+    bar = "█" * filled + "░" * (_BAR_WIDTH - filled)
     line = (
-        f"[{bar}] {current}/{total} ({pct:.1f}%)"
+        f"  [{bar}] {pct:5.1%}"
+        f"  {current}/{total}"
         f"  ok={processed} skip={skipped}"
         f"  {fps:.1f} fr/s  ETA {eta:.0f}s"
     )
-    print(line, end="\r", flush=True)
+    if _IS_TTY:
+        term_w = shutil.get_terminal_size(fallback=(120, 24)).columns
+        sys.stdout.write(f"\r{line[:term_w].ljust(term_w)}")
+    else:
+        sys.stdout.write(f"{line}\n")
+    sys.stdout.flush()
 
 
 def main(argv: list[str] | None = None) -> None:
