@@ -131,9 +131,7 @@ class RosbagConverter(Converter):
         self._max_frames = max_frames
 
     @staticmethod
-    def _resolve_max_frames(
-        max_frames: int | None, n_camera_frames: int
-    ) -> tuple[int, bool]:
+    def _resolve_max_frames(max_frames: int | None, n_camera_frames: int) -> tuple[int, bool]:
         """
         Risolve il numero effettivo di frame da estrarre.
 
@@ -204,9 +202,7 @@ class RosbagConverter(Converter):
 
             # Numero di frame camera presenti nel bag
             camera_topic = self._topics.get("camera")
-            n_camera_frames = sum(
-                c.msgcount for c in bag.connections if c.topic == camera_topic
-            )
+            n_camera_frames = sum(c.msgcount for c in bag.connections if c.topic == camera_topic)
 
             # Risolvi effective_max_frames e avvisa se max_frames è fuori range
             effective_max_frames, warn = self._resolve_max_frames(
