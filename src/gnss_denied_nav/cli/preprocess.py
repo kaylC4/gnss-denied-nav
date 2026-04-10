@@ -30,7 +30,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="preprocess-pipeline",
         description="Esegue la pipeline di preprocessing Stage 1-6 su un dataset flat.",
     )
-    p.add_argument("--config", required=True, help="Path al file YAML della pipeline.")
+    p.add_argument("--config", default="config/config.yaml", help="Path al file YAML della pipeline.")
     p.add_argument(
         "--data",
         required=True,
@@ -38,7 +38,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--out",
-        default=None,
+        default="data/data_default",
         help="Directory di destinazione immagini preprocessate (default: <data>/preprocessed/).",
     )
     p.add_argument(
@@ -60,39 +60,82 @@ def _parse_frame_range(s: str, total: int) -> tuple[int, int]:
     parts = s.split(":")
     if len(parts) != 2:
         raise ValueError(f"--frames deve essere nel formato START:END, ricevuto: {s!r}")
-    start = int(parts[0]) if parts[0] else 0
-    end = int(parts[1]) if parts[1] else total
+    start_raw = parts[0].strip()
+    end_raw   = parts[1].strip()
+
+    # ── start ────────────────────────────────────────────────────────────────
+    if not start_raw:
+        start = 0
+        print("Warning: START non specificato, uso 0.")
+    else:
+        start = int(start_raw)
+        if start < 0:
+            print(f"Warning: START={start} è negativo, uso 0.")
+            start = 0
+
+    # ── end ──────────────────────────────────────────────────────────────────
+    if not end_raw:
+        end = total
+        print(f"Warning: END non specificato, uso {total} (totale frame).")
+    else:
+        end = int(end_raw)
+        if end > total:
+            print(f"Warning: END={end} supera il totale ({total}), uso {total}.")
+            end = total
+
+    # ── consistenza ──────────────────────────────────────────────────────────
+    if start >= end:
+        raise ValueError(
+            f"Range non valido: START={start} >= END={end}. "
+            "Specifica un intervallo con START < END."
+        )
+
     start = max(0, min(start, total))
     end = max(start, min(end, total))
     return start, end
 
 
 def _last_alt_agl(
-    gnss_ts: "np.ndarray",  # type: ignore[name-defined]  # noqa: F821
+    gnss_ts: "np.ndarray",   # type: ignore[name-defined]  # noqa: F821
     gnss_alt: "np.ndarray",  # type: ignore[name-defined]  # noqa: F821
     ts: int,
+    max_dt_ns: int = 5_000_000_000,  # 5 secondi — soglia massima di scarto accettabile, unità di misura nanosecondi [ns]
 ) -> float:
     """
-    Restituisce l'ultimo valore di altitudine con timestamp <= ts.
-    Se il frame precede tutti i fix GNSS, usa il primo valore disponibile.
+    Restituisce la quota AGL del fix GNSS con timestamp più vicino a ts,
+    sia esso precedente o successivo.
+    Se lo scarto supera max_dt_ns, o nessun fix valido è trovato, ritorna 0.0.
     """
     import numpy as np
 
-    idx = int(np.searchsorted(gnss_ts, ts, side="right")) - 1
-    if idx < 0:
-        # Frame antecedente al primo fix: usa il valore più vicino disponibile
-        first_valid = next(
-            (float(v) for v in gnss_alt if not np.isnan(v) and v > 0), None
+    # ── Candidati: indice sinistro (≤ ts) e destro (> ts) ───────────────────
+    right_idx = int(np.searchsorted(gnss_ts, ts, side="right"))  # primo > ts
+    left_idx  = right_idx - 1                                     # ultimo ≤ ts
+
+    candidates = []
+    for idx in (left_idx, right_idx):
+        if 0 <= idx < len(gnss_ts):
+            dt  = abs(int(gnss_ts[idx]) - ts)
+            val = float(gnss_alt[idx])
+            if not np.isnan(val) and val > 0:
+                candidates.append((dt, val))
+
+    if not candidates:
+        # Nessun fix valido nell'intero array
+        print("Warning: nessun fix GNSS valido trovato, quota impostata a 0.0.")
+        return 0.0
+
+    # ── Prendi il candidato con scarto minore ────────────────────────────────
+    best_dt, best_val = min(candidates, key=lambda x: x[0])
+
+    if best_dt > max_dt_ns:
+        print(
+            f"Warning: fix più vicino ha scarto {best_dt / 1e9:.2f}s "
+            f"(soglia {max_dt_ns / 1e9:.0f}s), quota impostata a 0.0."
         )
-        return first_valid if first_valid is not None else 0.0
-    val = float(gnss_alt[idx])
-    if np.isnan(val) or val <= 0:
-        # Fix presente ma altitudine non valida: cerca il primo valore valido
-        first_valid = next(
-            (float(v) for v in gnss_alt if not np.isnan(v) and v > 0), None
-        )
-        return first_valid if first_valid is not None else 0.0
-    return val
+        return 0.0
+
+    return best_val
 
 
 def _print_progress(
