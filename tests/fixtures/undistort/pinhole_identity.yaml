@@ -1,0 +1,38 @@
+# Fixture: pinhole camera, zero distortion.
+# Used by: test_passthrough_zero_coeffs, test_round_trip_pinhole[identity],
+#          test_K_new_sanity
+#
+# undistort_balance: 1.0 — mantiene le dimensioni dell'immagine invariate
+# (nessun crop) per rendere il confronto round-trip diretto e deterministico.
+
+sensors:
+  camera:
+    hz: 10
+    width: 1024
+    height: 768
+    camera_type: pinhole
+    camera_orientation: downward
+    pixel_pitch: 1.5
+    fx: 800.0
+    fy: 800.0
+    cx: 512.0
+    cy: 384.0
+    dist_coeffs: [0.0, 0.0, 0.0, 0.0, 0.0]
+    model: pinhole_radtan
+  flight:
+    heading: 0.0
+    imu_rotation:
+      - [1.0, 0.0, 0.0]
+      - [0.0, 1.0, 0.0]
+      - [0.0, 0.0, 1.0]
+
+pipeline:
+  preprocessing:
+    satellite_gsd: 0.3
+    undistort_balance: 1.0
+    tile_size: 64
+    domain_normalization:
+      method: none
+      reference_tile: null
+      clip_limit: 2.0
+      tile_grid_size: [8, 8]
