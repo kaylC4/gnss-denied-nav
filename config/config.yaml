@@ -1,0 +1,168 @@
+# config/lighthouse_benchmarking.yaml
+# Configurazione per il dataset lighthouse_benchmarking (bag da sequenza Lighthouse)
+# Sensori: camera colore compressa, IMU Xsens, GPS NavSatFix
+#
+# Topic disponibili nel bag (verificati con rosbags inspect):
+#   /camera/image_color/compressed  → sensor_msgs/CompressedImage
+#   /imu/data                       → sensor_msgs/Imu
+#   /fix                            → sensor_msgs/NavSatFix  (GPS in ingresso)
+#   /globalEstimator/ppk_path       → nav_msgs/Path          (solo path, non NavSatFix)
+#
+# Nota: questo bag NON contiene un topic NavSatFix per il ground truth PPK.
+# gnss_gt è impostato a null — la pipeline gira senza ground truth.
+
+# ── Sorgente dati di volo ────────────────────────────────────────────────────
+dataset:
+  source: local
+
+  local:
+    path: data/lighthouse.bag
+
+  format: rosbag
+
+  cache:
+    dir: data/lighthouse_flat/
+    force_reconvert: false
+    max_frames: null            # null = tutti i frame; intero = limite per test rapidi
+
+  rosbag:
+    topics:
+      camera:   /camera/image_color/compressed  # sensor_msgs/CompressedImage (JPEG)
+      imu:      /imu/data                        # sensor_msgs/Imu
+      gnss_gt:  null                             # nessun NavSatFix PPK nel bag
+      gnss_in:   /fix                            # sensor_msgs/NavSatFix
+      odometry:  /Odometry                       # nav_msgs/Odometry — roll/pitch/yaw fusi
+
+  # ── Ground truth PPK ────────────────────────────────────────────────────────
+  # Questo bag NON contiene un topic NavSatFix PPK.
+  # Il file .pos RTKLIB è disponibile esternamente (output di RTKPOST).
+  #
+  # Cambia source: null se non hai ancora il file .pos.
+  # Cambia source: pos_file e compila pos_file quando ce l'hai.
+  #
+  ppk:
+    source: pos_file       # "rosbag" | "pos_file" | null
+    pos_file: data/lighthouse.pos
+    quality_max: 1         # Q=1 (fix) — soluzioni float escluse
+    gps_leapseconds: 18    # GPST − UTC = 18 s (valido per date >= 2017-01-01)
+
+# ── Sensori — parametri fisici e calibrazione ────────────────────────────────
+sensors:
+  camera:
+    hz: 10
+    # Risoluzione effettiva — verificare con /camera/camera_info nel bag
+    width: 1280
+    height: 720
+    # Tipo e orientamento — usati dalla pipeline di pre-processing drone-to-satellite
+    camera_type: pinhole        # "pinhole" | "fisheye"
+    camera_orientation: downward  # "downward" | "forward"
+    # Dimensione fisica del pixel del sensore — necessaria per calcolo GSD (Stage 4)
+    pixel_pitch: 1.5            # µm — PLACEHOLDER: verificare datasheet sensore
+    # Intrinseci — compilare leggendo il topic /camera/camera_info
+    fx: 689.14   # PLACEHOLDER
+    fy: 689.14   # PLACEHOLDER
+    cx: 640.0    # PLACEHOLDER
+    cy: 360.0    # PLACEHOLDER
+    # Coefficienti di distorsione: [k1, k2, p1, p2] per pinhole, [k1, k2, k3, k4] per fisheye
+    dist_coeffs: [0.0, 0.0, 0.0, 0.0]   # PLACEHOLDER
+    model: pinhole_radtan
+
+  imu:
+    hz: 400
+    # Xsens MTi — valori tipici, verificare con Allan Variance sul dataset
+    accel_noise_density: 0.005     # m/s^2/sqrt(Hz)
+    gyro_noise_density: 0.001      # rad/s/sqrt(Hz)
+    accel_random_walk: 0.0002      # m/s^3/sqrt(Hz)
+    gyro_random_walk: 0.00003      # rad/s^2/sqrt(Hz)
+
+  gnss:
+    hz: 5
+    deny_after_s: null             # null = usa GPS reale, float = simula deny dopo N sec
+
+  altitude_agl:
+    source: gnss_minus_dem
+    dem_path: data/dem/lighthouse_area.tif   # PLACEHOLDER — area da definire
+
+  # ── Dati di volo per-frame ───────────────────────────────────────────────────
+  # heading e imu_rotation sono estratti a runtime dai topic IMU/odometry.
+  # I valori qui sotto sono i fallback statici usati in assenza di dati live.
+  flight:
+    heading: 0.0      # gradi (0=nord, CW) — usato dallo Stage 3 (north-align)
+    # imu_rotation è la matrice 3×3 camera-to-world, aggiornata per ogni frame.
+    # PLACEHOLDER: sostituire con la rotazione media della sequenza se nota.
+    imu_rotation:
+      - [1.0, 0.0, 0.0]
+      - [0.0, 1.0, 0.0]
+      - [0.0, 0.0, 1.0]
+
+# Trasformazioni estrinseci (da calibration del rig Lighthouse)
+extrinsics:
+  T_cam_imu:
+    - [1.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0]
+    - [0.0, 0.0, 1.0, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]        # PLACEHOLDER — sostituire con valori reali
+
+pipeline:
+  pose_estimator: ins_radalt
+
+  tile_provider:
+    backend: offline_mbtiles
+    params:
+      mbtiles_path: data/tiles/lighthouse_area.mbtiles
+
+  patch_sampler:
+    backend: uniform_stride
+    params:
+      stride_px: 64
+
+  patch_size_px: 256
+
+  view_transformer: homography_inverse
+
+  # ── Pre-processing drone-to-satellite ────────────────────────────────────────
+  preprocessing:
+    # Stage 4 — GSD match
+    satellite_gsd: 0.3          # m/px — target GSD (WorldView-3/4, Maxar, Pléiades Neo)
+    # Stage 1 — Undistort
+    undistort_balance: 0.0      # 0.0 = nessun bordo nero (consigliato per matching)
+    # Stage 5 — Crop/Pad
+    tile_size: 512              # px — input encoder (512 per DINOv2, 224 per CLIP/GeoCLIP)
+    # Stage 6 — Domain normalization
+    domain_normalization:
+      method: none              # "none" | "hist" | "clahe"
+      reference_tile: null      # path a PNG satellite di riferimento (solo method: hist)
+      clip_limit: 2.0           # intensità CLAHE (solo method: clahe)
+      tile_grid_size: [8, 8]    # griglia CLAHE in pixel (solo method: clahe)
+
+  # ── Inspection — salvataggio output intermedi per verifica manuale ──────────
+  inspection:
+    enabled: true                 # true per attivare il salvataggio
+    output_dir: debug/stages      # directory di destinazione
+    seed: 42                      # seed random per riproducibilità
+    sampling:
+      mode: percent               # "percent" (X% del dataset) | "count" (N immagini fisse)
+      value: 10                   # 10% oppure 100 immagini, a seconda del mode
+    stages: [1, 2, 3, 4, 5, 6]   # quali stage salvare (1-6)
+
+  feature_encoder:
+    backend: onnx
+    params:
+      checkpoint: data/weights/dinov2_vitl14.onnx  # vitl14: 1024-dim, consigliato dalla spec
+      input_size: 518                               # DINOv2 ViT-L/14 usa 518×518
+
+  retrieval_engine:
+    backend: faiss_flat
+
+  navigation_filter:
+    backend: ekf_loosely_coupled
+    params:
+      chi2_gate: 5.99
+      R_min_m2: 25.0
+      Q_accel: 0.005
+      Q_gyro: 0.001
+
+evaluation:
+  min_match_score: 0.65
+  log_outliers: true
+  output_dir: outputs/lighthouse_benchmarking/
